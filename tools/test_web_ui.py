@@ -179,6 +179,22 @@ def main() -> None:
                     for tab in ('dashboard', 'offers', 'settings'):
                         page.click(f'[data-tab="{tab}"]')
                         assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), tab
+                    # A partial status warning must not blank the interface or
+                    # claim the whole service is unreachable.
+                    def warn_route(route):
+                        response = route.fetch()
+                        data = response.json()
+                        data['warnings'] = [{'section': 'library', 'error': 'RuntimeError'}]
+                        route.fulfill(response=response, json=data)
+                    page.route('**/api/status', warn_route)
+                    page.click('#refresh-button')
+                    expect(page.locator('#connection-banner')).to_contain_text('Partial status error')
+                    expect(page.locator('#connection-banner')).to_contain_text('library (RuntimeError)')
+                    expect(page.locator('#service-label')).to_have_text('Service online')
+                    expect(page.locator('#job-title')).to_contain_text(f'#{job}')
+                    page.unroute('**/api/status')
+                    page.click('#refresh-button')
+                    expect(page.locator('#connection-banner')).to_be_hidden()
                     page.click('#logout-button')
                     expect(page.locator('#auth-submit')).to_be_visible()
                     for language, label in [('fr', 'Connexion'), ('es', 'Iniciar sesión'), ('de', 'Anmelden')]:

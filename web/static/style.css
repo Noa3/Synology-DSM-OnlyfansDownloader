@@ -142,6 +142,7 @@ code { font-family: var(--mono); font-size: .86em; background: rgba(255, 255, 25
 .workspace-heading h1 { font-size: 1.65rem; }
 .eyebrow { color: var(--accent); font-size: .66rem; font-weight: 750; letter-spacing: .18em; margin: 0 0 7px; }
 .notice { border: 1px solid rgba(230,185,92,.35); border-left: 3px solid var(--warn); border-radius: 10px; padding: 12px 16px; margin: 0 0 18px; color: var(--warn); background: rgba(230,185,92,.05); font-size: .86rem; }
+.notice.bad { border-color: rgba(239,107,120,.45); border-left-color: var(--danger); color: #ffb3bb; background: rgba(239,107,120,.06); }
 .card + .card { margin-top: 18px; }
 .grid .card + .card, .stack .card + .card { margin-top: 0; }
 .card:focus-within { border-color: #3d536c; }

@@ -589,9 +589,29 @@
     }
   }
 
-  function connectionNotice(message = '') {
-    $('connection-banner').textContent = message;
-    $('connection-banner').hidden = !message;
+  function connectionNotice(message = '', kind = 'warn') {
+    const banner = $('connection-banner');
+    banner.textContent = message;
+    banner.className = `notice ${kind}`.trim();
+    banner.hidden = !message;
+  }
+
+  function describeError(error) {
+    if (!error) return t('Unbekannter Fehler');
+    if (error.name === 'AbortError') return t('Zeitüberschreitung');
+    const message = String(error.message || error).replace(/\s+/g, ' ').slice(0, 180);
+    return error.status ? `HTTP ${error.status}: ${message}` : message;
+  }
+
+  function statusWarnings(status) {
+    const warnings = Array.isArray(status && status.warnings) ? status.warnings : [];
+    const detail = warnings
+      .map((item) => `${item.section || '?'}${item.error ? ` (${item.error})` : ''}`)
+      .join(', ');
+    if (detail) {
+      connectionNotice(t('Teilweise Statusfehler: {detail}. Letzter Stand bleibt sichtbar.', { detail }), 'warn');
+    }
+    return detail;
   }
 
   async function poll() {
@@ -604,22 +624,37 @@
       state.failures = 0;
       state.lastSync = Date.now();
       $('last-sync').textContent = `${t('Aktualisiert')}: ${formatTime(new Date(state.lastSync).toISOString())}`;
-      connectionNotice();
+      const setup = Boolean(state.status && state.status.setup_required);
+      $('service-dot').className = `dot ${setup ? '' : 'ok'}`;
+      $('service-label').textContent = setup ? t('Einrichtung erforderlich') : t('Dienst online');
+      if (!statusWarnings(state.status)) connectionNotice();
       if (!state.settingsLoaded) {
-        try { await loadSettings(); } catch (_) { connectionNotice(t('Dienst online. Einstellungen werden erneut geladen.')); }
+        try { await loadSettings(); } catch (error) {
+          connectionNotice(t('Dienst online. Einstellungen konnten nicht geladen werden: {detail}', {
+            detail: describeError(error),
+          }), 'warn');
+        }
       }
       if (state.activeJob || state.eventsInitial || state.needsJobPoll) {
         try { await pollJob(); state.needsJobPoll = false; }
         catch (error) {
-          if (error.status !== 401) connectionNotice(t('Dienst online. Auftragsereignisse werden erneut geladen.'));
+          if (error.status !== 401) {
+            connectionNotice(t('Dienst online. Auftragsereignisse konnten nicht geladen werden: {detail}', {
+              detail: describeError(error),
+            }), 'warn');
+          }
         }
       }
     } catch (error) {
       if (error.status === 401) return;
       state.failures += 1;
-      $('service-dot').className = state.failures > 2 ? 'dot bad' : 'dot';
-      $('service-label').textContent = t('Verbindung wird wiederhergestellt …');
-      connectionNotice(t('Statusaktualisierung fehlgeschlagen. Letzter Stand bleibt sichtbar; laufende Aufträge werden dadurch nicht gestoppt.'));
+      if (state.failures >= 3) {
+        $('service-dot').className = 'dot bad';
+        $('service-label').textContent = `${t('Verbindung wird wiederhergestellt …')} (${describeError(error)})`;
+      }
+      connectionNotice(t('Statusaktualisierung fehlgeschlagen ({detail}). Letzter Stand bleibt sichtbar; laufende Aufträge werden dadurch nicht gestoppt.', {
+        detail: describeError(error),
+      }), state.failures >= 3 ? 'bad' : 'warn');
     } finally {
       state.polling = false;
     }

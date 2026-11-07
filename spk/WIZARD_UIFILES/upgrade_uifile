@@ -1,0 +1,13 @@
+[
+  {
+    "step_title": "OnlyFans DL – upgrade",
+    "items": [
+      {
+        "desc": "The existing web password, OnlyFans session, settings, private Python environment and confirmed library path are kept. This upgrade does not change the web password. After signing in, it can be changed under Settings → Change password."
+      },
+      {
+        "desc": "No shared folders are created, granted or deleted. Existing libraries and downloads remain untouched."
+      }
+    ]
+  }
+]

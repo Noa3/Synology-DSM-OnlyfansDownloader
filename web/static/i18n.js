@@ -179,6 +179,8 @@
     'Anmelden': 'Sign in',
     'Das Passwort wurde bei der Paketinstallation festgelegt. Es wird nur auf diesem NAS gespeichert.':
       'The password was set during package installation. It is stored only on this NAS.',
+    'Nach einem Upgrade bleibt das Passwort der Erstinstallation aktiv; es kann nach der Anmeldung unter Einstellungen geändert werden.':
+      'After an upgrade the password from the first installation remains active; it can be changed in Settings after signing in.',
     'Das Passwort muss mindestens 10 Zeichen lang sein.': 'The password must be at least 10 characters long.',
     'Die Passwörter stimmen nicht überein.': 'The passwords do not match.',
     'Anmeldung fehlgeschlagen.': 'Sign-in failed.',
@@ -236,6 +238,12 @@
     'Bitte eine Sitzung einfügen.': 'Please paste a session.',
     'Bitte zuerst eine Sitzung importieren.': 'Please import a session first.',
     'Die Oberfläche konnte nicht geladen werden.': 'The interface could not be loaded.',
+    'Unbekannter Fehler': 'Unknown error',
+    'Zeitüberschreitung': 'Timeout',
+    'Teilweise Statusfehler: {detail}. Letzter Stand bleibt sichtbar.': 'Partial status error: {detail}. The last known state remains visible.',
+    'Dienst online. Einstellungen konnten nicht geladen werden: {detail}': 'Service online. Settings could not be loaded: {detail}',
+    'Dienst online. Auftragsereignisse konnten nicht geladen werden: {detail}': 'Service online. Job events could not be loaded: {detail}',
+    'Statusaktualisierung fehlgeschlagen ({detail}). Letzter Stand bleibt sichtbar; laufende Aufträge werden dadurch nicht gestoppt.': 'Status update failed ({detail}). The last known state remains visible; running jobs are not stopped by this.',
     'Es ist keine Sitzung eingerichtet. Bitte zuerst eine Sitzung importieren und testen.':
       'No session configured. Import and test a session first.',
     'Es ist keine Sitzung eingerichtet. Bitte zuerst eine Sitzung importieren.':

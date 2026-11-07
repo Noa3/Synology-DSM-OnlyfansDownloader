@@ -1,4 +1,4 @@
-# Testbericht — OnlyFans DL für Synology DSM 2.8.0-6
+# Testbericht — OnlyFans DL für Synology DSM 2.8.0-7
 
 Build-Datum: **2026-11-07**
 Zielplattform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 aus SynoCommunity**
@@ -16,8 +16,8 @@ Testumgebung: Windows 11, CPython 3.13.12, Chromium/Playwright
 | Prüfung | Ergebnis | Ort |
 | --- | --- | --- |
 | Vollständige Python-Testsuite | **363 Tests, 0 Fehler, 3 Skips** | lokal |
-| DSM-spezifische Tests | **69 Tests, 0 Fehler, 2 Linux-Skips** | lokal |
-| DSM-spezifische Tests inkl. echter Prozessgruppen | **69 Tests, 0 Fehler, keine Skips** | Linux-CI |
+| DSM-spezifische Tests | **70 Tests, 0 Fehler, 2 Linux-Skips** | lokal |
+| DSM-spezifische Tests inkl. echter Prozessgruppen | **70 Tests, 0 Fehler, keine Skips** | Linux-CI |
 | Paketbau | **bestanden** | lokal |
 | Reproduzierbarer Bau (zweimal) | **byte-identisch** | lokal |
 | Browser-UI (Playwright) | **bestanden**, keine Konsolenfehler | lokal |
@@ -44,7 +44,7 @@ python -m unittest discover -s tests
 Auszug:
 
 ```
-Ran 363 tests in 118.857s
+Ran 364 tests in 105.668s
 OK (skipped=3)
 ```
 
@@ -67,15 +67,15 @@ Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
 ## Paketprüfung
 
 ```
-Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-6.spk
+Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-7.spk
 Größe: 22,01 MiB
-SHA256: 6271f8f08c13ce8be689b5d5d8843a68c6558631d8c0689f7e976064183729bd
-MD5(package.tgz): 1675024208a9ce6950993d2db419d0b3
+SHA256: ee1183c39facb50854f938e0354f6363cd67cef755c80217a8851fd38c5f3a6f
+MD5(package.tgz): 813fe3fa96b2d05dbed1e177e330aca7
 ```
 
 Geprüft:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-6`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-7`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
   `install_dep_packages=python313>=3.13.11-9`, MD5-Checksumme stimmt.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
@@ -133,7 +133,7 @@ echten Downloadmessungen: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en
 Die Messung erfolgte unter Windows. PSS ist dort nicht verfügbar; die
 DSM-Zielmarke bezieht sich auf PSS und muss mit `tools/measure_dsm.py` auf der
 DS723+ gemessen werden. Die folgenden Werte stammen aus der früheren Messung,
-nicht aus einem erneuten Speicherbenchmark von 2.8.0-6.
+nicht aus einem erneuten Speicherbenchmark von 2.8.0-7.
 
 | Zustand | Prozesse | RSS | Private |
 | --- | --- | ---: | ---: |
@@ -192,7 +192,7 @@ des Dienstes und des aktiven Workers an.
 
 Linux-CI auf Implementierungscommit `50c114c10f4a010fe7500b7ea99a81167e0a2d04`:
 [`42399361663`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42399361663),
-`Ran 69 tests in 22.070s`, `OK`, keine Skips. Enthält die echten Linux-Tests
+`Ran 70 tests in 22.070s`, `OK`, keine Skips. Enthält die echten Linux-Tests
 für Worker-Kindgruppen und Dienststop ohne PID-Datei. **Kein DSM-Hardwaretest.**
 
 - **Keine echte OnlyFans-Sitzung** und kein echter Mediendownload in dieser

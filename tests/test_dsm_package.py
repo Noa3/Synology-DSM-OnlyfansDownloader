@@ -50,7 +50,7 @@ class PackageTests(unittest.TestCase):
             key, _, value = line.partition('=')
             values[key] = value.strip('"')
         self.assertEqual(values['package'], 'OnlyFansDL')
-        self.assertEqual(values['version'], '2.8.0-6')
+        self.assertEqual(values['version'], '2.8.0-7')
         self.assertEqual(values['arch'], 'r1000')
         self.assertEqual(values['os_min_ver'], '7.2-64570')
         self.assertEqual(values['adminport'], '8765')
@@ -95,6 +95,8 @@ class PackageTests(unittest.TestCase):
             resource = json.loads(archive.extractfile('conf/resource').read().decode('utf-8'))
             wizard = json.loads(archive.extractfile('WIZARD_UIFILES/install_uifile').read().decode('utf-8'))
             wizard_ger = json.loads(archive.extractfile('WIZARD_UIFILES/install_uifile_ger').read().decode('utf-8'))
+            upgrade = json.loads(archive.extractfile('WIZARD_UIFILES/upgrade_uifile').read().decode('utf-8'))
+            upgrade_ger = json.loads(archive.extractfile('WIZARD_UIFILES/upgrade_uifile_ger').read().decode('utf-8'))
             package_data = archive.extractfile('package.tgz').read()
         import io
         with tarfile.open(fileobj=io.BytesIO(package_data), mode='r:gz') as pkg:
@@ -113,6 +115,10 @@ class PackageTests(unittest.TestCase):
                     if item.get('type') == 'password']
             self.assertIn('wizard_app_password', keys)
             self.assertIn('wizard_app_password_confirm', keys)
+        for document in (upgrade, upgrade_ger):
+            # The upgrade wizard must not ask for a password that --if-missing
+            # would silently ignore, leaving the first-install hash active.
+            self.assertFalse(any(item.get('type') == 'password' for item in document[0]['items']))
         config = json.loads(ui_data)
         app = config['.url']['com.noa3.onlyfansdl']
         self.assertEqual(app['port'], '8765')

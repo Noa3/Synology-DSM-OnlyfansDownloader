@@ -50,7 +50,7 @@ The package source is required because Synology itself does not provide Python
    - Name: `SynoCommunity`
    - Location: `https://packages.synocommunity.com/`
    - The source must be trusted; DSM may show a notice.
-2. **Download `OnlyFansDL-r1000-dsm72_2.8.0-6.spk`** (from this repository's
+2. **Download `OnlyFansDL-r1000-dsm72_2.8.0-7.spk`** (from this repository's
    releases) and choose Package Center → Manual Install.
 3. Package Center installs **Python 3.13 automatically** as a dependency. If the
    runtime is missing, install `Python 3.13` from SynoCommunity first.
@@ -160,8 +160,8 @@ python tools/fetch_wheels.py
 python tools/build_spk.py
 
 # Result
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-6.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-6.spk.sha256
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-7.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-7.spk.sha256
 ```
 
 The build needs no Synology toolchain and no Linux. Wheels are downloaded from
@@ -205,7 +205,7 @@ security, API, worker, package layout). Results and the clear distinction betwee
 
 A window inside the DSM desktop is generally possible but needs an HTTPS /
 same-origin integration. Simple embedding of HTTP port 8765 would fail on
-HTTPS DSM due to mixed content and click protection. **2.8.0-6 still opens the
+HTTPS DSM due to mixed content and click protection. **2.8.0-7 still opens the
 browser interface**; security headers are not disabled.
 
 The session can be imported with a guided cURL text or a HAR/JSON file picker.

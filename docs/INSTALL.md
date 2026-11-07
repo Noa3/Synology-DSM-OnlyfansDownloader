@@ -14,7 +14,7 @@ Python or pip commands** are required for installation, setup or operation.
 
 ## 2. Install the package
 
-1. Download `OnlyFansDL-r1000-dsm72_2.8.0-6.spk` from the release.
+1. Download `OnlyFansDL-r1000-dsm72_2.8.0-7.spk` from the release.
 2. Package Center → **Manual Install** → choose the file.
 3. DSM shows the **Python 3.13** dependency and installs it automatically from
    the SynoCommunity source.
@@ -171,10 +171,11 @@ later reinstall finds the library again when the same folder is selected.
 | --- | --- |
 | “Python 3.13 not found” | SynoCommunity source missing or `python313` not installed. Check the source, install Python 3.13, install the package again. |
 | Package does not start | Package Center → view log; also `/var/packages/OnlyFansDL/var/logs/service.log` (readable only via SSH/File Station). Common cause: port 8765 in use. |
-| Login does not work | Use the password from the install wizard. If forgotten, uninstall and reinstall (downloads remain) or reset the control data. |
+| Login does not work | Use the password from the **first installation**. An upgrade keeps the existing password and its wizard no longer asks for a new one. If forgotten, uninstall and reinstall (downloads remain) or reset the control data. |
+| “Reconnecting …” in the top bar | 2.8.0-7 shows the failing section/HTTP status in the yellow/red banner. Restart the package once, hard-reload the page (Ctrl+F5), then use the banner message for diagnosis. A single failed section no longer takes the whole UI offline. |
 | “No session configured” | Import and test a session under **Session**. |
 | Session test fails | Copy the request from `onlyfans.com/api2/v2/`, not another page. The session may be tied to a network/IP; test on the same network as the browser. Cloudflare challenges are not bypassed. |
-| “Package requires root” / administrator warning | Replace old versions 2.8.0-1/2.8.0-2. 2.8.0-6 uses the SynoCommunity privilege pattern without root/administrator group rights. If the warning persists, report the exact DSM version and message. |
+| “Package requires root” / administrator warning | Replace old versions 2.8.0-1/2.8.0-2. 2.8.0-7 uses the SynoCommunity privilege pattern without root/administrator group rights. If the warning persists, report the exact DSM version and message. |
 | Download folder not writable | In DSM grant the system internal user `sc-onlyfansdl` Read/Write only for the desired share; then save the existing path in Settings. |
 | No DSM menu entry | Restart the package; `reloadui` is set during installation. Alternatively open `http://<NAS-IP>:8765/` directly. |
 | Many files, slow first run | Expected with old layouts; later runs use the manifest. No media is held permanently in the control service. |

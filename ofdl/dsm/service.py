@@ -1050,47 +1050,105 @@ class RequestHandler(BaseHTTPRequestHandler):
                    extra={'Location': location})
 
     def _status(self) -> dict[str, Any]:
-        with control_db.connect(self.state.paths.db) as db:
-            active = control_db.active_job(db)
-            recent = control_db.list_jobs(db, 5)
-            schedule = control_db.get_json(db, 'schedule', {'enabled': False, 'time': '03:30', 'options': {}})
-            last_run = control_db.get_setting(db, 'schedule_last_run', '')
-            verified = control_db.get_setting(db, 'session_verified', '0') == '1'
-        output = self.state.output_dir()
-        disk = None
-        if output is not None and output.is_dir():
+        """Return a partial status rather than failing the whole UI.
+
+        A single unreadable library, session file, disk or job must not turn the
+        top bar into a permanent "Reconnecting" state. The affected section is
+        replaced by a safe default and listed in ``warnings``.
+        """
+        warnings: list[dict[str, str]] = []
+
+        def safe(section: str, reader: Any, default: Any) -> Any:
             try:
-                usage = shutil.disk_usage(output)
-                disk = {'total': usage.total, 'used': usage.used, 'free': usage.free,
-                        'total_text': human_bytes(usage.total), 'free_text': human_bytes(usage.free)}
-            except OSError:
-                disk = None
-        worker_memory = _proc_memory(int(active['pid']) if active and active.get('pid') else None)
-        self_memory = _proc_memory(os.getpid())
-        session = self.state.session_store.describe()
-        session['verified'] = verified
-        share = resolve_share_root(self.state.paths)
-        share_default = default_output_dir(self.state.paths)
+                return reader()
+            except Exception as exc:
+                LOG.exception('status section failed: %s', section)
+                warnings.append({'section': section, 'error': type(exc).__name__})
+                return default
+
+        active = None
+        recent: list[dict[str, Any]] = []
+        schedule = {'enabled': False, 'time': '03:30', 'options': {}}
+        last_run = ''
+        verified = False
+        output = None
+
+        def read_database() -> None:
+            nonlocal active, recent, schedule, last_run, verified
+            with control_db.connect(self.state.paths.db) as db:
+                active = control_db.active_job(db)
+                recent = control_db.list_jobs(db, 5)
+                schedule = control_db.get_json(db, 'schedule', schedule)
+                last_run = control_db.get_setting(db, 'schedule_last_run', '')
+                verified = control_db.get_setting(db, 'session_verified', '0') == '1'
+
+        safe('database', read_database, None)
+        output = safe('output_dir', self.state.output_dir, None)
+
+        def read_disk() -> dict[str, Any] | None:
+            if output is None or not output.is_dir():
+                return None
+            usage = shutil.disk_usage(output)
+            return {'total': usage.total, 'used': usage.used, 'free': usage.free,
+                    'total_text': human_bytes(usage.total), 'free_text': human_bytes(usage.free)}
+
+        disk = safe('disk', read_disk, None)
+
+        def read_memory() -> dict[str, Any]:
+            worker_memory = _proc_memory(int(active['pid']) if active and active.get('pid') else None)
+            return {'service_pid': os.getpid(), **_proc_memory(os.getpid()), 'worker': worker_memory}
+
+        memory = safe('memory', read_memory,
+                      {'service_pid': os.getpid(), 'pss_kb': 0, 'rss_kb': 0,
+                       'worker': {'pss_kb': 0, 'rss_kb': 0}})
+
+        def read_session() -> dict[str, Any]:
+            session = self.state.session_store.describe()
+            session['verified'] = verified
+            return session
+
+        session = safe('session', read_session, {'present': False, 'user_id': None, 'verified': False})
+
+        def read_share() -> dict[str, Any]:
+            share = resolve_share_root(self.state.paths)
+            share_default = default_output_dir(self.state.paths)
+            return {'name': share.name if share else DEFAULT_SHARE_NAME,
+                    'root': str(share) if share else '',
+                    'default_output': str(share_default) if share_default else ''}
+
+        share = safe('share', read_share,
+                     {'name': DEFAULT_SHARE_NAME, 'root': '', 'default_output': ''})
+
+        def read_library() -> dict[str, Any]:
+            return self.state.library()
+
+        library = safe('library', read_library,
+                       {'manifest': False, 'files': 0, 'bytes': 0, 'error': 'unavailable',
+                        'output_dir': str(output) if output else '', 'writable': False})
+
+        def read_jobs() -> list[dict[str, Any]]:
+            return [public_job(row) for row in recent]
+
+        recent_jobs = safe('jobs', read_jobs, [])
+        active_job = safe('active_job', lambda: public_job(active) if active else None, None)
+
         return {
             'version': SERVICE_VERSION,
             'package_version': PACKAGE_VERSION,
             'uptime_seconds': int(time.monotonic() - self.state.started),
-            'setup_required': not self.state.password_configured(),
+            'setup_required': safe('password', lambda: not self.state.password_configured(), False),
             'session': session,
-            'active_job': public_job(active) if active else None,
-            'recent_jobs': [public_job(row) for row in recent],
+            'active_job': active_job,
+            'recent_jobs': recent_jobs,
             'schedule': schedule,
             'schedule_last_run': last_run,
             'nas_time': datetime.now().astimezone().isoformat(),
             'output_dir': str(output) if output else '',
-            'share': {
-                'name': share.name if share else DEFAULT_SHARE_NAME,
-                'root': str(share) if share else '',
-                'default_output': str(share_default) if share_default else '',
-            },
+            'share': share,
             'disk': disk,
-            'library': self.state.library(),
-            'memory': {'service_pid': os.getpid(), **self_memory, 'worker': worker_memory},
+            'library': library,
+            'memory': memory,
+            'warnings': warnings,
         }
 
     # -- POST -------------------------------------------------------------

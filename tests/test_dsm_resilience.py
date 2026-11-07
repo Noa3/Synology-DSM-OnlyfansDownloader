@@ -95,6 +95,26 @@ class ResilienceTests(unittest.TestCase):
         self.assertEqual(len(data['events']), 100)
         self.assertEqual(data['events'][-1]['message'], '249')
 
+    def test_status_returns_partial_data_instead_of_500(self):
+        self.h.setup()
+        with patch.object(self.h.app, 'library', side_effect=RuntimeError('broken manifest')):
+            status, data = self.h.call('GET', '/api/status')
+        self.assertEqual(status, 200)
+        self.assertEqual(data['warnings'][0]['section'], 'library')
+        self.assertEqual(data['warnings'][0]['error'], 'RuntimeError')
+        self.assertTrue(data['version'])
+        self.assertIn('recent_jobs', data)
+        self.assertIn('memory', data)
+        with patch.object(self.h.app.session_store, 'describe', side_effect=OSError('unreadable')):
+            status, data = self.h.call('GET', '/api/status')
+        self.assertEqual(status, 200)
+        self.assertFalse(data['session']['present'])
+        self.assertTrue(any(item['section'] == 'session' for item in data['warnings']))
+        with patch.object(self.h.app, 'output_dir', side_effect=RuntimeError('symlink loop')):
+            status, data = self.h.call('GET', '/api/status')
+        self.assertEqual(status, 200)
+        self.assertTrue(any(item['section'] == 'output_dir' for item in data['warnings']))
+
     def test_session_cannot_change_mid_job(self):
         self.h.setup(); self.h.import_fake_session()
         with db.connect(self.h.paths.db) as conn:

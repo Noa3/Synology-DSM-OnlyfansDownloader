@@ -1,5 +1,19 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-7 — diagnose and survive status failures
+
+- Build `/api/status` from independent sections. A broken library, session file,
+  disk check, job row or share lookup now yields a safe default and a `warnings`
+  entry instead of a 500 that leaves the UI looping on “Reconnecting”.
+- Show the actual failing section/exception and HTTP status in the warning
+  banner. Only switch the top bar to “Reconnecting” after three consecutive
+  failures; the first two are warnings. Settings/event failures no longer imply
+  that the whole service is down.
+- Add `upgrade_uifile`/`upgrade_uifile_ger` without a password field. The old
+  upgrade dialog asked for a password while `postinst --if-missing` ignored it,
+  so the first-install password stayed active. The login page now explains this.
+- No change to downloads, storage consent, scheduling, API retry or automation.
+
 ## DSM 2.8.0-6 — English-default docs and multilingual project pages
 
 - Make English the default README and documentation language; keep German
