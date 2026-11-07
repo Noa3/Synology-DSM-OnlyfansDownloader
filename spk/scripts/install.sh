@@ -102,11 +102,5 @@ if [ -f "$LOGS/install.log" ]; then
     chmod 600 "$LOGS/install.log" 2>/dev/null || true
 fi
 
-# Package scripts run as the package account on DSM 7.  If a root-configured
-# installation is used, hand the mutable directory to that account.
-if [ -n "${EFF_USER:-}" ] && [ "$(id -u)" = "0" ]; then
-    chown -R "$EFF_USER:$EFF_USER" "$PKGVAR" 2>/dev/null || true
-fi
-
 echo "OnlyFans DL $ACTION completed. Python runtime and wheels are ready."
 exit 0
