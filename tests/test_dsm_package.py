@@ -50,7 +50,7 @@ class PackageTests(unittest.TestCase):
             key, _, value = line.partition('=')
             values[key] = value.strip('"')
         self.assertEqual(values['package'], 'OnlyFansDL')
-        self.assertEqual(values['version'], '2.8.0-1')
+        self.assertEqual(values['version'], '2.8.0-2')
         self.assertEqual(values['arch'], 'r1000')
         self.assertEqual(values['os_min_ver'], '7.2-64570')
         self.assertEqual(values['adminport'], '8765')
@@ -101,9 +101,10 @@ class PackageTests(unittest.TestCase):
             ui_data = pkg.extractfile('ui/config').read().decode('utf-8')
         self.assertEqual(privilege['defaults']['run-as'], 'package')
         self.assertEqual(privilege['username'], 'sc-onlyfansdl')
-        self.assertEqual(privilege['join-groupname'], 'administrators')
+        self.assertNotIn('join-groupname', privilege)
+        self.assertTrue(all(item['run-as'] == 'package' for item in privilege['ctrl-script']))
         shares = resource['data-share']['shares']
-        self.assertEqual(shares[0]['name'], 'OnlyFansDL')
+        self.assertEqual([share['name'] for share in shares], ['OnlyFansDL', 'OnlyFans'])
         self.assertIn('sc-onlyfansdl', shares[0]['permission']['rw'])
         for document in (wizard, wizard_ger):
             keys = [item.get('subitems', [{}])[0].get('key') for item in document[0]['items']

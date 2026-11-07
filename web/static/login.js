@@ -7,6 +7,7 @@
   const errorBox = document.getElementById('auth-error');
   const submit = document.getElementById('auth-submit');
   const mode = document.body.dataset.mode || 'login';
+  const t = (key) => (window.ofdlI18n ? window.ofdlI18n.t(key) : key);
 
   function setError(text) {
     errorBox.textContent = text || '';
@@ -35,17 +36,17 @@
     setError('');
     const value = password.value;
     if (value.length < 10) {
-      setError('Das Passwort muss mindestens 10 Zeichen lang sein.');
+      setError(t('Das Passwort muss mindestens 10 Zeichen lang sein.'));
       password.focus();
       return;
     }
     if (mode === 'setup' && value !== confirm.value) {
-      setError('Die Passwörter stimmen nicht überein.');
+      setError(t('Die Passwörter stimmen nicht überein.'));
       confirm.focus();
       return;
     }
     submit.disabled = true;
-    submit.textContent = mode === 'setup' ? 'Wird gespeichert …' : 'Wird angemeldet …';
+    submit.textContent = mode === 'setup' ? t('Wird gespeichert …') : t('Wird angemeldet …');
     try {
       if (mode === 'setup') {
         await request('/api/setup', { password: value, confirm: confirm.value });
@@ -62,11 +63,11 @@
         window.location.replace('/login');
         return;
       }
-      setError(error.message || 'Anmeldung fehlgeschlagen.');
+      setError(t(error.message) || t('Anmeldung fehlgeschlagen.'));
       password.select();
     } finally {
       submit.disabled = false;
-      submit.textContent = mode === 'setup' ? 'Passwort speichern' : 'Anmelden';
+      submit.textContent = mode === 'setup' ? t('Passwort speichern') : t('Anmelden');
     }
   });
 

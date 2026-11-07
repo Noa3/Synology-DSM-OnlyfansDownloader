@@ -15,9 +15,12 @@ Versionsangaben.
 - Die Weboberfläche ist passwortgeschützt und für den Zugriff im vertrauenswürdigen
   LAN gedacht. Standard ist HTTP auf Port 8765; für externen Zugriff muss ein
   HTTPS-Reverse-Proxy davor.
-- Der Steuerdienst läuft als eigener DSM-Dienstbenutzer `sc-onlyfansdl`. Das
-  Paket tritt der Gruppe `administrators` bei, damit ein frei gewählter
-  Downloadordner lesbar/schreibbar ist.
+- Der Steuerdienst läuft als eigener DSM-Dienstbenutzer `sc-onlyfansdl` und
+  fordert **keine** root- oder Administratorgruppen-Rechte an.
+- Die Freigaben `OnlyFansDL` und `OnlyFans` werden über den DSM-`data-share`-
+  Worker für das Dienstkonto freigegeben. Andere Zielordner benötigen eine
+  explizite Freigabeberechtigung für `sc-onlyfansdl`; die Oberfläche meldet
+  andernfalls einen Berechtigungsfehler.
 - Die OnlyFans-Sitzung wird ausschließlich lokal gespeichert
   (`var/data/session.json`, Modus `0600`). Sie wird nicht an Dritte gesendet und
   nicht in Einstellungen, Auftragsdaten oder Protokollen abgelegt.
@@ -47,12 +50,11 @@ Versionsangaben.
   geschützt. Wer den Port 8765 ins Internet weiterleitet, gefährdet die Sitzung.
   Nutze DSM-Reverse-Proxy/HTTPS, eine Firewall und nach Möglichkeit
   `OFDL_COOKIE_SECURE=1` (Umgebungsvariable des Dienstes).
-- **Administratorgruppe**: Der Dienstbenutzer hat breiten Dateizugriff, damit
-  der Nutzer eine bestehende Bibliothek in jeder Freigabe auswählen kann. Das
-  ist eine bewusste Abwägung für einen NAS-Downloader. Wer das nicht möchte,
-  kann die Bibliothek auf die Freigabe `OnlyFansDL` beschränken und
-  `join-groupname` aus `conf/privilege` entfernen; dann ist der Ordnerdialog
-  auf die freigegebene Freigabe beschränkt.
+- **Dateizugriff**: Der Dienstbenutzer ist bewusst unprivilegiert. Er kann nur
+  auf die Freigaben `OnlyFansDL` und `OnlyFans` sowie auf Ordner zugreifen, für
+  die ihm ausdrücklich Rechte erteilt wurden. Eine bestehende Bibliothek in
+  einer anderen Freigabe muss in eine dieser Freigaben verschoben/kopiert oder
+  dem Dienstkonto freigegeben werden.
 - **Sitzungsimport**: Der eingefügte Text kann Cookies enthalten. Er wird im
   Browser verarbeitet und per HTTP an den lokalen Dienst gesendet. Keine
   HAR-Datei in einem geteilten Browser-Tab offen lassen.

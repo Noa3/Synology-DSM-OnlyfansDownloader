@@ -3,7 +3,7 @@
     "step_title": "OnlyFans DL – Web-Zugang",
     "items": [
       {
-        "desc": "Das Paket installiert eine private Python-3.13-Laufzeit und alle benötigten Bibliotheken. Docker, SSH, pip und Python-Befehle sind nicht nötig. Python 3.13 stammt aus der SynoCommunity-Paketquelle und wird als Abhängigkeit automatisch installiert."
+        "desc": "Das Paket installiert eine private Python-3.13-Laufzeit und alle benötigten Bibliotheken. SSH-, pip- und Python-Befehle sind nicht nötig. Python 3.13 stammt aus der SynoCommunity-Paketquelle und wird als Abhängigkeit automatisch installiert."
       },
       {
         "type": "password",

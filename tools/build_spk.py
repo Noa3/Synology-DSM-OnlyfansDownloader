@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build a reproducible native Synology DSM 7.2 SPK.
 
-No Docker and no Synology toolchain are required: the package is pure Python,
-and all binary wheels target the DS723+ (r1000) / CPython 3.13 / manylinux2014.
+No Synology toolchain is required: the package is pure Python, and all binary
+wheels target the DS723+ (r1000) / CPython 3.13 / manylinux2014.
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = 'OnlyFansDL'
-VERSION = '2.8.0-1'
+VERSION = '2.8.0-2'
 ARCH = 'r1000'
 DSM_MIN = '7.2-64570'
 PORT = '8765'
@@ -173,12 +173,12 @@ def make_package_tgz(staging: Path, output: Path, epoch: int) -> None:
 
 
 def info_text(checksum: str) -> str:
-    description = ('Native OnlyFans downloader for Synology DSM. Runs without Docker or '
-                   'Container Manager, uses a private Python 3.13 environment and keeps '
-                   'downloads, the existing folder layout and the SQLite manifest.')
-    description_ger = ('Nativer OnlyFans-Downloader fuer Synology DSM. Laeuft ohne Docker und '
-                       'Container Manager, nutzt eine private Python-3.13-Umgebung und behaelt '
-                       'Downloads, Ordnerstruktur und SQLite-Manifest bei.')
+    description = ('Native OnlyFans downloader for Synology DSM. Uses a private '
+                   'Python 3.13 environment and keeps downloads, the existing '
+                   'folder layout and the SQLite manifest.')
+    description_ger = ('Nativer OnlyFans-Downloader fuer Synology DSM. Nutzt eine '
+                       'private Python-3.13-Umgebung und behaelt Downloads, '
+                       'Ordnerstruktur und SQLite-Manifest bei.')
     values = [
         ('package', PACKAGE),
         ('version', VERSION),
@@ -204,8 +204,10 @@ def info_text(checksum: str) -> str:
         ('reloadui', 'yes'),
         ('support_conf_folder', 'yes'),
         ('install_dep_packages', 'python313>=3.13.11-9'),
-        ('changelog', '2.8.0-1: Native DSM package with private Python runtime, '
-                      'split control/worker processes, web UI and DSM scheduling.'),
+        ('changelog', '2.8.0-2: Unprivileged package account, no administrator group, '
+                      'explicit package-run lifecycle scripts, bilingual UI/site and '
+                      'cleaned repository. 2.8.0-1: Native DSM package with private '
+                      'Python runtime, split control/worker processes and scheduling.'),
         ('checksum', checksum),
     ]
     lines = [f'{key}="{value}"' for key, value in values]

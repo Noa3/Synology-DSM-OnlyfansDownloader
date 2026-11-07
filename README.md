@@ -1,9 +1,10 @@
 # OnlyFans DL für Synology DSM
 
-Nativer Downloader für Synology DSM 7.2 – **ohne Docker, ohne Container Manager,
-ohne SSH, ohne manuelle Python- oder pip-Befehle**. Das Paket bringt eine private
-Python-Laufzeit mit, installiert alle benötigten Bibliotheken offline und startet
-eine kleine Weboberfläche auf dem NAS.
+**Deutsch** · [English GitHub Page](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/) · [Deutsche GitHub Page](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/de/)
+
+Nativer Downloader für Synology DSM 7.2 – **ohne SSH und ohne manuelle Python- oder
+pip-Befehle**. Das Paket bringt eine private Python-Laufzeit mit, installiert alle
+benötigten Bibliotheken offline und startet eine kleine Weboberfläche auf dem NAS.
 
 > **Wichtig:** Dies ist ein inoffizieller Client. Verwende nur dein eigenes Konto
 > und nur Inhalte, die du speichern darfst. Das Projekt umgeht keine Zugriffskontrollen,
@@ -48,7 +49,7 @@ nicht über SSH.
    - Name: `SynoCommunity`
    - Ort: `https://packages.synocommunity.com/`
    - Die Quelle muss vertrauenswürdig sein; DSM zeigt ggf. einen Hinweis.
-2. **`OnlyFansDL-r1000-dsm72_2.8.0-1.spk` herunterladen** (Release-Seite dieses
+2. **`OnlyFansDL-r1000-dsm72_2.8.0-2.spk` herunterladen** (Release-Seite dieses
    Repositories) und in Package Center → Manuell installieren auswählen.
 3. Package Center installiert **Python 3.13 automatisch** als Abhängigkeit.
    Falls die Laufzeit fehlt, zuerst `Python 3.13` aus SynoCommunity installieren.
@@ -58,8 +59,10 @@ nicht über SSH.
    `http://<NAS-IP>:8765/` aufrufen und mit dem Passwort anmelden.
 6. Unter **Downloads** den Zielordner wählen. Standard ist
    `OnlyFansDL/OnlyFans` in der automatisch angelegten Freigabe `OnlyFansDL`.
-   Ein bestehender Ordner (z. B. `/volume1/OnlyFans`) kann über **Durchsuchen**
-   ausgewählt werden.
+   Eine vorhandene Freigabe `OnlyFans` wird ebenfalls für das Dienstkonto
+   vorbereitet und kann als bestehende Bibliothek ausgewählt werden. Andere
+   Ordner können über **Durchsuchen** gewählt werden, sofern das Dienstkonto
+   Les-/Schreibrecht besitzt.
 7. Unter **Sitzung** eine eingeloggte OnlyFans-API-Anfrage einfügen
    (cURL, HAR, JSON oder Roh-Header), **Importieren** und **Sitzung testen**.
 8. Creator auswählen (manuell oder „Alle aktiven Abonnements“), Filter setzen und
@@ -71,6 +74,15 @@ Der normale Ablauf verwendet ausschließlich DSM Package Center und die
 Weboberfläche. Python, pip, venv und die Wheels werden vom Paket installiert.
 SSH ist nur für die optionale Speicher-/Diagnosemessung nötig (siehe
 `docs/MEASUREMENT.md`), nicht für Installation oder Betrieb.
+
+## Sprachen
+
+- **Weboberfläche:** Deutsch/Englisch über den Umschalter oben rechts. Die Wahl
+  wird im Browser gespeichert.
+- **GitHub Pages:** [Englisch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/)
+  und [Deutsch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/de/).
+- **Dokumentation:** Diese README ist deutsch; die Installations- und
+  Architekturtexte liegen unter `docs/`.
 
 ## Wo liegen die Daten?
 
@@ -119,19 +131,18 @@ python tools/fetch_wheels.py
 python tools/build_spk.py
 
 # Ergebnis
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-1.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-1.spk.sha256
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-2.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-2.spk.sha256
 ```
 
-Der Build benötigt kein Docker, keinen Synology-Toolchain und kein Linux. Die
-Wheels werden aus PyPI für die Zielplattform geladen und mit SHA-256 im Lockfile
-festgehalten. Ein zweiter Build mit demselben `SOURCE_DATE_EPOCH` erzeugt auf
-derselben Plattform byte-identische Dateien; der Inhalt (Quelltext, Lockfile,
-Wheels) ist auch zwischen Windows und Linux identisch, die gzip-Komprimierung
-kann sich jedoch zwischen zlib-Versionen unterscheiden. Der Release-Asset ist
-der lokal geprüfte Windows-Build; CI baut zusätzlich ein inhaltsgleiches
-Linux-Artefakt. `tests/test_dsm_package.py` prüft die Byte-Identität zweier
-Builds auf derselben Plattform.
+Der Build benötigt keinen Synology-Toolchain und kein Linux. Die Wheels werden aus
+PyPI für die Zielplattform geladen und mit SHA-256 im Lockfile festgehalten. Ein
+zweiter Build mit demselben `SOURCE_DATE_EPOCH` erzeugt auf derselben Plattform
+byte-identische Dateien; der Inhalt (Quelltext, Lockfile, Wheels) ist auch zwischen
+Windows und Linux identisch, die gzip-Komprimierung kann sich jedoch zwischen
+zlib-Versionen unterscheiden. Der Release-Asset ist der lokal geprüfte Windows-Build;
+CI baut zusätzlich ein inhaltsgleiches Linux-Artefakt. `tests/test_dsm_package.py`
+prüft die Byte-Identität zweier Builds auf derselben Plattform.
 
 ## Tests
 
@@ -151,10 +162,11 @@ klare Trennung zwischen „lokal geprüft“ und „auf DSM-Hardware geprüft“
   ist ein eigenes Passwort, keine DSM-SSO-Anmeldung.
 - Die Sitzungsdatei ist `0600` und enthält nur die importierten Header/Cookies.
   Sie wird nicht in Einstellungen, Auftragsdaten oder Protokollen abgelegt.
-- Das Paket läuft als eigener DSM-Dienstbenutzer `sc-onlyfansdl` und ist Mitglied
-  der Gruppe `administrators`, damit der gewählte Downloadordner les- und
-  schreibbar ist. Das ist für einen NAS-Downloader mit frei wählbarem Zielordner
-  erforderlich; die Weboberfläche ist passwortgeschützt.
+- Das Paket läuft als eigener DSM-Dienstbenutzer `sc-onlyfansdl` und fordert
+  **keine** root- oder Administratorgruppen-Rechte an. Die Freigaben
+  `OnlyFansDL` und `OnlyFans` werden vom DSM-`data-share`-Worker für dieses
+  Konto freigegeben. Für andere Zielordner muss das Dienstkonto Les-/Schreibrecht
+  besitzen; andernfalls meldet die Oberfläche einen Berechtigungsfehler.
 - Kein DRM-Bypass, keine Kaufautomatisierung, keine Umgehung von Cloudflare-
   oder sonstigen Sicherheitsabfragen.
 - Die Live-API-Kompatibilität wurde in dieser Build-Umgebung **nicht** mit einem

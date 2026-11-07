@@ -2,10 +2,10 @@
 
 ## Ziel
 
-Ein natives DSM-Paket, das ohne Docker und ohne Container Manager läuft, im
-Leerlauf möglichst wenig Arbeitsspeicher belegt und vorhandene Bibliotheken
-weiterverwendet. Der vorhandene Python-Kern (`ofdl/`) bleibt die einzige
-Download-Engine; Desktop-UI und CLI werden nicht ersetzt.
+Ein natives DSM-Paket, das im Leerlauf möglichst wenig Arbeitsspeicher belegt
+und vorhandene Bibliotheken weiterverwendet. Der vorhandene Python-Kern
+(`ofdl/`) bleibt die einzige Download-Engine; Desktop-UI und CLI werden nicht
+ersetzt.
 
 ## Prozessmodell
 
@@ -112,16 +112,19 @@ Darstellung. Die Sitzung liegt in `session.json` (0600), nie in `settings`.
 
 ## Ordner und Berechtigungen
 
-- `conf/resource` legt die Freigabe `OnlyFansDL` an und gibt dem Dienstbenutzer
-  `sc-onlyfansdl` Les-/Schreibrecht.
+- `conf/resource` legt die Freigaben `OnlyFansDL` und `OnlyFans` an und gibt
+  dem Dienstbenutzer `sc-onlyfansdl` Les-/Schreibrecht. `OnlyFans` dient als
+  Migrationspfad für eine bestehende Bibliothek.
 - `conf/privilege` setzt `run-as: package`, den Benutzer `sc-onlyfansdl` und
-  `join-groupname: administrators`. Dadurch kann der Nutzer auch eine bestehende
-  Bibliothek in einer anderen Freigabe auswählen, ohne SSH oder manuelle
-  `chown`-Befehle.
+  `ctrl-script` für alle Lebenszyklusaktionen ebenfalls auf `package`. Es wird
+  **keine** root- oder Administratorgruppen-Mitgliedschaft angefordert.
 - Der Ordner-Dialog liest nur Verzeichnisnamen (maximal 500 pro Ebene), keine
   Dateiinhalte. Er erlaubt keine Pfade außerhalb der freigegebenen Volumes.
-- Vom Dienst neu angelegte Ordner erhalten die Gruppe `administrators` und das
-  Setgid-Bit, damit DSM-Benutzer sie im File Station sehen.
+  Andere Freigaben funktionieren nur, wenn das Dienstkonto dort Leserechte hat;
+  sonst meldet der Dialog einen Berechtigungsfehler.
+- Vom Dienst neu angelegte Ordner erhalten Modus `0770`. Die DSM-Freigabe-ACLs
+  und das Administrator-Konto behalten die Kontrolle; das Paket ändert keine
+  Gruppenzugehörigkeit.
 
 ## Vereinbarkeit mit vorhandenen Downloads
 

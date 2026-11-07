@@ -23,6 +23,10 @@
       <span id="service-label">Dienst wird geprüft …</span>
     </div>
     <div class="top-actions">
+      <select id="language-select" class="lang-select" aria-label="Sprache / Language">
+        <option value="de">DE</option>
+        <option value="en">EN</option>
+      </select>
       <button id="refresh-button" class="ghost" type="button">Aktualisieren</button>
       <button id="logout-button" class="ghost" type="button">Abmelden</button>
     </div>
@@ -312,6 +316,7 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/static/i18n.js" defer></script>
   <script src="/static/app.js" defer></script>
 </body>
 </html>

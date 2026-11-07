@@ -253,7 +253,9 @@ class ServiceTests(unittest.TestCase):
         try:
             image = self.h.output / 'photo.jpg'
             Image.new('RGB', (640, 480), (10, 120, 180)).save(image)
-            status, data = self.h.call('POST', '/api/preview', {'path': 'photo.jpg', 'kind': 'photo'})
+            status, data = self.h.call('POST', '/api/preview',
+                                       {'path': 'photo.jpg', 'kind': 'photo',
+                                        'output_dir': str(self.h.output)})
             self.assertEqual(status, 202)
             job_id = data['job']['id']
             for _ in range(60):

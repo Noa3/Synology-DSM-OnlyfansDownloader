@@ -4,6 +4,7 @@
 
   const $ = (id) => document.getElementById(id);
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const t = (key, vars) => (window.ofdlI18n ? window.ofdlI18n.t(key, vars) : key);
   const ACTIVE = new Set(['queued', 'running', 'paused']);
   const STATUS_TEXT = {
     queued: 'Wartet', running: 'Läuft', paused: 'Pausiert',
@@ -84,7 +85,7 @@
     if (!value) return '–';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleString('de-DE', {
+    return date.toLocaleString(locale(), {
       year: 'numeric', month: '2-digit', day: '2-digit',
       hour: '2-digit', minute: '2-digit',
     });
@@ -94,7 +95,11 @@
     if (!value) return '–';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return String(value);
-    return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return date.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function locale() {
+    return (window.ofdlI18n && window.ofdlI18n.getLanguage() === 'en') ? 'en-US' : 'de-DE';
   }
 
   function splitProfiles(text) {
@@ -183,8 +188,8 @@
     const version = status.version || '2.8.0';
     $('version-label').textContent = `v${version} · DSM`;
     $('service-dot').className = `dot ${statusClassForService(status)}`;
-    $('service-label').textContent = status.setup_required ? 'Einrichtung erforderlich' : 'Dienst online';
-    $('service-badge').textContent = status.setup_required ? 'Einrichtung' : 'Online';
+    $('service-label').textContent = status.setup_required ? t('Einrichtung erforderlich') : t('Dienst online');
+    $('service-badge').textContent = status.setup_required ? t('Einrichtung') : t('Online');
     $('service-badge').className = `pill ${status.setup_required ? 'warn' : 'ok'}`;
     $('fact-uptime').textContent = formatDuration(status.uptime_seconds);
     const memory = status.memory || {};
@@ -197,15 +202,15 @@
     $('fact-output').textContent = status.output_dir || '–';
     $('fact-share').textContent = (status.share && status.share.root) || '–';
     $('fact-disk').textContent = status.disk
-      ? `${status.disk.free_text} frei von ${status.disk.total_text}`
+      ? t('{free} frei von {total}', { free: status.disk.free_text, total: status.disk.total_text })
       : '–';
 
     const session = status.session || {};
     const sessionPresent = Boolean(session.present);
     const sessionVerified = Boolean(session.verified);
     $('session-state').textContent = sessionPresent
-      ? (sessionVerified ? 'Verbunden' : 'Importiert')
-      : 'Nicht eingerichtet';
+      ? (sessionVerified ? t('Verbunden') : t('Importiert'))
+      : t('Nicht eingerichtet');
     $('session-state').className = `pill ${sessionVerified ? 'ok' : 'warn'}`;
     $('session-user').textContent = session.user_id || '–';
 
@@ -216,12 +221,12 @@
 
   function updateLibrary(library) {
     $('library-output').textContent = library.output_dir || '–';
-    $('library-manifest').textContent = library.manifest ? 'vorhanden' : 'neu / leer';
+    $('library-manifest').textContent = library.manifest ? t('vorhanden') : t('neu / leer');
     $('library-files').textContent = library.manifest ? String(library.files || 0) : '–';
     $('library-bytes').textContent = library.manifest ? formatBytes(library.bytes) : '–';
-    $('library-writable').textContent = library.writable ? 'ja' : 'nein';
+    $('library-writable').textContent = library.writable ? t('ja') : t('nein');
     const disk = state.status && state.status.disk;
-    $('library-disk').textContent = disk ? `${disk.free_text} frei` : '–';
+    $('library-disk').textContent = disk ? `${disk.free_text} ${t('frei')}` : '–';
   }
 
   function computeNextRun(enabled, time, lastRun) {
@@ -233,7 +238,7 @@
     candidate.setHours(Number(match[1]), Number(match[2]), 0, 0);
     const today = now.toISOString().slice(0, 10);
     if (candidate <= now || lastRun === today) candidate.setDate(candidate.getDate() + 1);
-    return candidate.toLocaleString('de-DE', {
+    return candidate.toLocaleString(locale(), {
       weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
     });
   }
@@ -252,7 +257,7 @@
       const cell = document.createElement('td');
       cell.colSpan = 5;
       cell.className = 'muted';
-      cell.textContent = 'Noch keine Aufträge.';
+      cell.textContent = t('Noch keine Aufträge.');
       row.appendChild(cell);
       body.appendChild(row);
       return;
@@ -261,8 +266,8 @@
       const row = document.createElement('tr');
       const values = [
         `#${job.id}`,
-        KIND_TEXT[job.kind] || job.kind,
-        STATUS_TEXT[job.status] || job.status,
+        t(KIND_TEXT[job.kind] || job.kind),
+        t(STATUS_TEXT[job.status] || job.status),
         jobSummary(job),
         formatDate(job.finished_at),
       ];
@@ -279,12 +284,14 @@
     if (job.error) return job.error.slice(0, 100);
     const result = job.result || {};
     if (typeof result.downloaded === 'number') {
-      return `${result.downloaded} neu · ${result.existing || 0} vorhanden · ${result.errors || 0} Fehler`;
+      return t('{n} neu · {e} vorhanden · {f} Fehler', {
+        n: result.downloaded, e: result.existing || 0, f: result.errors || 0,
+      });
     }
-    if (typeof result.creators === 'number') return `${result.creators} Abonnements`;
+    if (typeof result.creators === 'number') return t('{n} Abonnements', { n: result.creators });
     if (result.message) return String(result.message).slice(0, 100);
-    if (job.status === 'cancelled') return 'Abgebrochen';
-    if (job.status === 'running' || job.status === 'queued') return job.phase || 'läuft';
+    if (job.status === 'cancelled') return t('Abgebrochen');
+    if (job.status === 'running' || job.status === 'queued') return job.phase || t('läuft');
     return '–';
   }
 
@@ -295,7 +302,7 @@
     list.replaceChildren();
     const item = document.createElement('li');
     item.className = 'muted';
-    item.textContent = 'Noch keine Ereignisse in diesem Auftrag.';
+    item.textContent = t('Noch keine Ereignisse in diesem Auftrag.');
     list.appendChild(item);
     $('event-count').textContent = '';
   }
@@ -324,7 +331,7 @@
             preview.type = 'button';
             preview.className = 'ghost';
             preview.style.marginLeft = '8px';
-            preview.textContent = 'Vorschau';
+            preview.textContent = t('Vorschau');
             preview.addEventListener('click', () => requestPreview(media.relative, media.kind));
             message.appendChild(preview);
           }
@@ -338,7 +345,7 @@
       list.appendChild(item);
       if (list.children.length > 250) list.removeChild(list.firstChild);
     }
-    $('event-count').textContent = `${list.children.length} Ereignisse`;
+    $('event-count').textContent = t('{n} Ereignisse', { n: list.children.length });
     if (nearBottom) list.scrollTop = list.scrollHeight;
   }
 
@@ -348,16 +355,16 @@
     if (!job) {
       empty.hidden = false;
       active.hidden = true;
-      $('job-status').textContent = 'Leerlauf';
+      $('job-status').textContent = t('Leerlauf');
       $('job-status').className = 'pill';
       return;
     }
     empty.hidden = true;
     active.hidden = false;
-    $('job-status').textContent = STATUS_TEXT[job.status] || job.status;
+    $('job-status').textContent = t(STATUS_TEXT[job.status] || job.status);
     $('job-status').className = `pill ${statusClass(job.status)}`;
-    $('job-title').textContent = `#${job.id} · ${KIND_TEXT[job.kind] || job.kind}`;
-    $('job-phase').textContent = job.phase || (ACTIVE.has(job.status) ? 'Wird vorbereitet …' : jobSummary(job));
+    $('job-title').textContent = `#${job.id} · ${t(KIND_TEXT[job.kind] || job.kind)}`;
+    $('job-phase').textContent = job.phase || (ACTIVE.has(job.status) ? t('Wird vorbereitet …') : jobSummary(job));
 
     const stats = job.stats || {};
     let done = Number(job.progress_done || stats.overall_done || 0);
@@ -366,14 +373,16 @@
     let progressText = '';
     if (total > 0) {
       bar = Math.max(0, Math.min(100, (done / total) * 100));
-      progressText = `${done.toLocaleString('de-DE')} / ${total.toLocaleString('de-DE')} Dateien`;
+      progressText = t('{done} / {total} Dateien', {
+        done: done.toLocaleString(locale()), total: total.toLocaleString(locale()),
+      });
     } else if (Number(stats.current_total) > 0) {
       const current = Number(stats.current_done || 0);
       const currentTotal = Number(stats.current_total || 0);
       bar = Math.max(0, Math.min(100, (current / currentTotal) * 100));
       progressText = `${formatBytes(current)} / ${formatBytes(currentTotal)}`;
     } else {
-      progressText = ACTIVE.has(job.status) ? 'Ermittlung läuft …' : 'Keine Fortschrittsdaten';
+      progressText = ACTIVE.has(job.status) ? t('Ermittlung läuft …') : t('Keine Fortschrittsdaten');
     }
     $('job-progress-bar').style.width = `${bar}%`;
     $('job-progress-text').textContent = progressText;
@@ -384,15 +393,15 @@
     const grid = $('job-stats');
     grid.replaceChildren();
     const items = [
-      ['Neu', stats.downloaded || 0],
-      ['Vorhanden', stats.existing || 0],
-      ['Geplant', stats.planned || 0],
-      ['Fehler', stats.errors || 0],
-      ['Gefiltert', stats.filtered || 0],
-      ['Nicht verfügbar', stats.unavailable || 0],
+      [t('Neu'), stats.downloaded || 0],
+      [t('Vorhanden'), stats.existing || 0],
+      [t('Geplant'), stats.planned || 0],
+      [t('Fehler'), stats.errors || 0],
+      [t('Gefiltert'), stats.filtered || 0],
+      [t('Nicht verfügbar'), stats.unavailable || 0],
       ['DRM', stats.drm || 0],
       ['Streaming', stats.streaming || 0],
-      ['Übertragen', stats.transferred_bytes ? formatBytes(stats.transferred_bytes) : '0 B'],
+      [t('Übertragen'), stats.transferred_bytes ? formatBytes(stats.transferred_bytes) : '0 B'],
     ];
     for (const [label, value] of items) {
       const box = document.createElement('div');
@@ -410,7 +419,7 @@
     const finished = !ACTIVE.has(job.status);
     pause.disabled = finished;
     cancel.disabled = finished;
-    pause.textContent = job.status === 'paused' ? 'Fortsetzen' : 'Pause';
+    pause.textContent = job.status === 'paused' ? t('Fortsetzen') : t('Pause');
   }
 
   function handleJobFinished(job) {
@@ -419,27 +428,29 @@
     const result = job.result || {};
     if (job.kind === 'subscriptions' && job.status === 'completed') {
       loadCreators(1).catch(() => {});
-      toast(`${result.creators || 0} Abonnements geladen.`, 'ok');
+      toast(t('{n} Abonnements geladen.', { n: result.creators || 0 }), 'ok');
     } else if (job.kind === 'test_session') {
       const box = $('session-result');
       box.className = `result-box ${job.status === 'completed' ? 'ok' : 'bad'}`;
       box.textContent = job.status === 'completed'
-        ? (result.message || 'Sitzung akzeptiert.') + (result.username ? ` (@${result.username})` : '')
-        : (job.error || 'Sitzungstest fehlgeschlagen.');
+        ? (t(result.message || 'Sitzung akzeptiert.') + (result.username ? ` (@${result.username})` : ''))
+        : t(job.error || 'Sitzungstest fehlgeschlagen.');
       loadStatus().catch(() => {});
     } else if (job.kind === 'preview') {
       if (job.status === 'completed' && result.url) {
         window.open(result.url, '_blank', 'noopener');
       } else {
-        toast(result.message || job.error || 'Vorschau nicht verfügbar.', job.status === 'completed' ? '' : 'bad');
+        toast(t(result.message || job.error || 'Vorschau nicht verfügbar.'), job.status === 'completed' ? '' : 'bad');
       }
     } else if (job.kind === 'download') {
       if (job.status === 'completed') {
-        toast(`Download fertig: ${result.downloaded || 0} neu, ${result.existing || 0} vorhanden.`, 'ok');
+        toast(t('Download fertig: {n} neu, {e} vorhanden.', {
+          n: result.downloaded || 0, e: result.existing || 0,
+        }), 'ok');
       } else if (job.status === 'cancelled') {
-        toast('Download abgebrochen. Fertige Dateien bleiben erhalten.', '');
+        toast(t('Download abgebrochen. Fertige Dateien bleiben erhalten.'), '');
       } else {
-        toast(job.error || 'Download fehlgeschlagen.', 'bad');
+        toast(t(job.error || 'Download fehlgeschlagen.'), 'bad');
       }
       $('library-output').textContent = state.status?.output_dir || '–';
       loadStatus().catch(() => {});
@@ -493,7 +504,7 @@
       if (state.activeJob) await pollJob();
     } catch (error) {
       $('service-dot').className = 'dot bad';
-      $('service-label').textContent = 'Dienst nicht erreichbar';
+      $('service-label').textContent = t('Dienst nicht erreichbar');
     } finally {
       state.polling = false;
     }
@@ -536,13 +547,13 @@
   }
 
   function validateDownloadOptions(options) {
-    if (!options.output_dir) throw new Error('Bitte einen Downloadordner auswählen.');
+    if (!options.output_dir) throw new Error(t('Bitte einen Downloadordner auswählen.'));
     if (!options.all_subscriptions && options.profiles.length === 0) {
-      throw new Error('Bitte Creator auswählen oder „Alle aktiven Abonnements“ aktivieren.');
+      throw new Error(t('Bitte Creator auswählen oder „Alle aktiven Abonnements“ aktivieren.'));
     }
-    if (!options.categories.length) throw new Error('Mindestens eine Inhaltskategorie auswählen.');
+    if (!options.categories.length) throw new Error(t('Mindestens eine Inhaltskategorie auswählen.'));
     if (!options.types.photos && !options.types.videos && !options.types.audio) {
-      throw new Error('Mindestens einen Dateityp auswählen.');
+      throw new Error(t('Mindestens einen Dateityp auswählen.'));
     }
   }
 
@@ -580,7 +591,7 @@
     $('schedule-last').textContent = settings.schedule_last_run || '–';
     if (settings.proxy_set) {
       $('proxy').value = '';
-      $('proxy').placeholder = `Gesetzt: ${settings.proxy} – leer lassen zum Behalten`;
+      $('proxy').placeholder = t('Gesetzt: {proxy} – leer lassen zum Behalten', { proxy: settings.proxy });
     } else {
       $('proxy').value = '';
       $('proxy').placeholder = 'http://192.168.1.10:8080';
@@ -602,8 +613,8 @@
     const names = new Set(splitProfiles($('creator-names').value));
     for (const name of state.selectedCreators) names.add(name);
     $('creator-selection').textContent = $('all-subscriptions').checked
-      ? 'Alle Abonnements'
-      : `${names.size} ausgewählt`;
+      ? t('Alle Abonnements')
+      : t('{n} ausgewählt', { n: names.size });
   }
 
   async function loadCreators(page = 1) {
@@ -619,8 +630,8 @@
       const note = document.createElement('p');
       note.className = 'muted';
       note.textContent = state.creatorQuery
-        ? 'Keine Treffer.'
-        : 'Keine Abonnements gespeichert. „Abonnements laden“ startet einen kurzen Auftrag.';
+        ? t('Keine Treffer.')
+        : t('Keine Abonnements gespeichert. „Abonnements laden“ startet einen kurzen Auftrag.');
       list.appendChild(note);
     } else {
       for (const creator of data.items) {
@@ -642,7 +653,9 @@
         list.appendChild(label);
       }
     }
-    $('creator-page').textContent = `Seite ${state.creatorPage} / ${state.creatorPages} · ${state.creatorTotal}`;
+    $('creator-page').textContent = t('Seite {page} / {pages} · {total}', {
+      page: state.creatorPage, pages: state.creatorPages, total: state.creatorTotal,
+    });
     $('creator-prev').disabled = state.creatorPage <= 1;
     $('creator-next').disabled = state.creatorPage >= state.creatorPages;
   }
@@ -683,7 +696,7 @@
     if (!data.items || !data.items.length) {
       const note = document.createElement('p');
       note.className = 'muted';
-      note.textContent = 'Keine Unterordner.';
+      note.textContent = t('Keine Unterordner.');
       list.appendChild(note);
     } else {
       for (const item of data.items) {
@@ -703,9 +716,9 @@
 
   async function createFolder() {
     const name = $('new-folder-name').value.trim();
-    if (!name) { toast('Bitte einen Ordnernamen eingeben.', 'bad'); return; }
+    if (!name) { toast(t('Bitte einen Ordnernamen eingeben.'), 'bad'); return; }
     const button = $('create-folder');
-    setBusy(button, true, 'Anlegen …');
+    setBusy(button, true, t('Anlegen …'));
     try {
       const data = await api('/api/folders', {
         method: 'POST',
@@ -713,7 +726,7 @@
       });
       $('new-folder-name').value = '';
       await loadFolder(data.path);
-      toast('Ordner angelegt.', 'ok');
+      toast(t('Ordner angelegt.'), 'ok');
     } catch (error) {
       toast(error.message, 'bad');
     } finally {
@@ -749,10 +762,10 @@
       return;
     }
     const button = dryRun ? $('start-scan') : $('start-download');
-    setBusy(button, true, dryRun ? 'Scan läuft …' : 'Startet …');
+    setBusy(button, true, dryRun ? t('Scan läuft …') : t('Startet …'));
     try {
       $('download-message').textContent = '';
-      await startJob('download', options, dryRun ? 'Scan gestartet.' : 'Download gestartet.');
+      await startJob('download', options, dryRun ? t('Scan gestartet.') : t('Download gestartet.'));
     } catch (error) {
       toast(error.message, 'bad');
     } finally {
@@ -763,10 +776,10 @@
   async function saveDefaults() {
     const options = collectDownloadOptions(false);
     const button = $('save-defaults');
-    setBusy(button, true, 'Speichern …');
+    setBusy(button, true, t('Speichern …'));
     try {
       await api('/api/settings', { method: 'POST', body: { download_defaults: options } });
-      toast('Download-Einstellungen gespeichert.', 'ok');
+      toast(t('Download-Einstellungen gespeichert.'), 'ok');
     } catch (error) {
       toast(error.message, 'bad');
     } finally {
@@ -776,13 +789,13 @@
 
   async function importSession() {
     const text = $('session-text').value;
-    if (!text.trim()) { toast('Bitte eine Sitzung einfügen.', 'bad'); return; }
+    if (!text.trim()) { toast(t('Bitte eine Sitzung einfügen.'), 'bad'); return; }
     const button = $('import-session');
-    setBusy(button, true, 'Importiere …');
+    setBusy(button, true, t('Importiere …'));
     try {
       const data = await api('/api/session/import', { method: 'POST', body: { text } });
       $('session-text').value = '';
-      toast(`Sitzung importiert (Konto-ID ${data.user_id}). Bitte jetzt testen.`, 'ok');
+      toast(t('Sitzung importiert (Konto-ID {id}). Bitte jetzt testen.', { id: data.user_id }), 'ok');
       await poll();
     } catch (error) {
       toast(error.message, 'bad');
@@ -793,11 +806,11 @@
 
   async function testSession() {
     const button = $('test-session');
-    setBusy(button, true, 'Prüfe …');
+    setBusy(button, true, t('Prüfe …'));
     $('session-result').className = 'result-box';
-    $('session-result').textContent = 'Sitzung wird geprüft …';
+    $('session-result').textContent = t('Sitzung wird geprüft …');
     try {
-      await startJob('test_session', {}, 'Sitzungstest gestartet.');
+      await startJob('test_session', {}, t('Sitzungstest gestartet.'));
     } catch (error) {
       $('session-result').className = 'result-box bad';
       $('session-result').textContent = error.message;
@@ -808,10 +821,10 @@
   }
 
   async function clearSession() {
-    if (!window.confirm('Sitzung wirklich vom NAS löschen?')) return;
+    if (!window.confirm(t('Sitzung wirklich vom NAS löschen?'))) return;
     try {
       await api('/api/session/clear', { method: 'POST', body: {} });
-      toast('Sitzung gelöscht.', 'ok');
+      toast(t('Sitzung gelöscht.'), 'ok');
       await poll();
     } catch (error) {
       toast(error.message, 'bad');
@@ -821,7 +834,7 @@
   async function saveProxy(clear = false) {
     const value = clear ? '' : $('proxy').value.trim();
     if (!clear && !value && state.settings && state.settings.proxy_set) {
-      toast('Proxy unverändert. Zum Entfernen „Entfernen“ wählen.');
+      toast(t('Proxy unverändert. Zum Entfernen „Entfernen“ wählen.'));
       return;
     }
     try {
@@ -829,12 +842,12 @@
       state.settings = { ...(state.settings || {}), ...data };
       if (data.proxy_set) {
         $('proxy').value = '';
-        $('proxy').placeholder = `Gesetzt: ${data.proxy} – leer lassen zum Behalten`;
+        $('proxy').placeholder = t('Gesetzt: {proxy} – leer lassen zum Behalten', { proxy: data.proxy });
       } else {
         $('proxy').value = '';
         $('proxy').placeholder = 'http://192.168.1.10:8080';
       }
-      toast(clear ? 'Proxy entfernt.' : 'Proxy gespeichert.', 'ok');
+      toast(clear ? t('Proxy entfernt.') : t('Proxy gespeichert.'), 'ok');
     } catch (error) {
       toast(error.message, 'bad');
     }
@@ -847,7 +860,7 @@
         body: { rules_source: $('rules-source').value.trim() },
       });
       state.settings = { ...(state.settings || {}), ...data };
-      toast('Regelquelle gespeichert.', 'ok');
+      toast(t('Regelquelle gespeichert.'), 'ok');
     } catch (error) {
       toast(error.message, 'bad');
     }
@@ -869,11 +882,11 @@
       options,
     };
     const button = $('save-schedule');
-    setBusy(button, true, 'Speichern …');
+    setBusy(button, true, t('Speichern …'));
     try {
       const data = await api('/api/settings', { method: 'POST', body: { schedule } });
       state.settings = { ...(state.settings || {}), ...data };
-      toast('Zeitplan gespeichert.', 'ok');
+      toast(t('Zeitplan gespeichert.'), 'ok');
       await poll();
     } catch (error) {
       toast(error.message, 'bad');
@@ -888,7 +901,7 @@
         path: relative,
         kind,
         output_dir: outputDirValue(),
-      }, 'Vorschau wird erzeugt …');
+      }, t('Vorschau wird erzeugt …'));
     } catch (error) {
       toast(error.message, 'bad');
     }
@@ -909,9 +922,9 @@
     $('use-default-folder').addEventListener('click', async () => {
       try {
         const settings = await api('/api/settings');
-        const root = settings.share && settings.share.root;
-        if (root) $('output-dir').value = `${root}/OnlyFans`;
-        else toast('Keine Freigabe gefunden.', 'bad');
+        const fallback = (settings.share && settings.share.default_output) || settings.output_dir;
+        if (fallback) $('output-dir').value = fallback;
+        else toast(t('Keine Freigabe gefunden.'), 'bad');
       } catch (error) {
         toast(error.message, 'bad');
       }
@@ -919,9 +932,9 @@
 
     $('load-subscriptions').addEventListener('click', async () => {
       const button = $('load-subscriptions');
-      setBusy(button, true, 'Lade …');
+      setBusy(button, true, t('Lade …'));
       try {
-        await startJob('subscriptions', {}, 'Abonnements werden geladen.');
+        await startJob('subscriptions', {}, t('Abonnements werden geladen.'));
       } catch (error) {
         toast(error.message, 'bad');
       } finally {
@@ -967,9 +980,9 @@
       const current = $('current-password').value;
       const next = $('new-password').value;
       const confirm = $('confirm-password').value;
-      if (next !== confirm) { toast('Die neuen Passwörter stimmen nicht überein.', 'bad'); return; }
+      if (next !== confirm) { toast(t('Die neuen Passwörter stimmen nicht überein.'), 'bad'); return; }
       const button = event.submitter;
-      setBusy(button, true, 'Ändere …');
+      setBusy(button, true, t('Ändere …'));
       try {
         await api('/api/password', {
           method: 'POST',
@@ -978,7 +991,7 @@
         $('current-password').value = '';
         $('new-password').value = '';
         $('confirm-password').value = '';
-        toast('Passwort geändert.', 'ok');
+        toast(t('Passwort geändert.'), 'ok');
       } catch (error) {
         toast(error.message, 'bad');
       } finally {
@@ -1009,7 +1022,7 @@
         await api(`/api/jobs/${state.activeJob.id}/${paused ? 'resume' : 'pause'}`, {
           method: 'POST', body: {},
         });
-        toast(paused ? 'Auftrag fortgesetzt.' : 'Auftrag pausiert.');
+        toast(paused ? t('Auftrag fortgesetzt.') : t('Auftrag pausiert.'));
         await poll();
       } catch (error) {
         toast(error.message, 'bad');
@@ -1017,10 +1030,10 @@
     });
     $('job-cancel').addEventListener('click', async () => {
       if (!state.activeJob) return;
-      if (!window.confirm('Auftrag wirklich abbrechen? Fertige Dateien bleiben erhalten.')) return;
+      if (!window.confirm(t('Auftrag wirklich abbrechen? Fertige Dateien bleiben erhalten.'))) return;
       try {
         await api(`/api/jobs/${state.activeJob.id}/cancel`, { method: 'POST', body: {} });
-        toast('Abbruch angefordert.');
+        toast(t('Abbruch angefordert.'));
         await poll();
       } catch (error) {
         toast(error.message, 'bad');
@@ -1030,6 +1043,12 @@
     $('refresh-library').addEventListener('click', () => poll());
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) poll();
+    });
+    document.addEventListener('ofdl-language', () => {
+      if (state.status) updateFacts(state.status);
+      updateJobCard(state.activeJob || state.lastJob);
+      updateCreatorSelection();
+      if (state.creatorTotal) loadCreators(state.creatorPage).catch(() => {});
     });
   }
 
@@ -1041,7 +1060,7 @@
       await poll();
       window.setInterval(() => { if (!document.hidden) poll(); }, 3000);
     } catch (error) {
-      if (error.status !== 401) toast(error.message || 'Die Oberfläche konnte nicht geladen werden.', 'bad');
+      if (error.status !== 401) toast(error.message || t('Die Oberfläche konnte nicht geladen werden.'), 'bad');
     }
   }
 

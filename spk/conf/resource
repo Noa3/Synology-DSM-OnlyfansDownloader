@@ -8,6 +8,14 @@
             "sc-onlyfansdl"
           ]
         }
+      },
+      {
+        "name": "OnlyFans",
+        "permission": {
+          "rw": [
+            "sc-onlyfansdl"
+          ]
+        }
       }
     ]
   }

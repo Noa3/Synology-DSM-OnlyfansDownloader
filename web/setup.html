@@ -9,6 +9,12 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="auth-page" data-mode="setup">
+  <div class="auth-lang">
+    <select id="language-select" class="lang-select" aria-label="Sprache / Language">
+      <option value="de">DE</option>
+      <option value="en">EN</option>
+    </select>
+  </div>
   <main class="auth-card" aria-labelledby="auth-title">
     <div class="brand-mark" aria-hidden="true">OF</div>
     <h1 id="auth-title">Ersteinrichtung</h1>
@@ -23,6 +29,7 @@
     </form>
     <p class="hint">Das Paket legt normalerweise bereits bei der Installation ein Passwort an. Diese Seite erscheint nur, wenn das nicht geschehen ist.</p>
   </main>
+  <script src="/static/i18n.js" defer></script>
   <script src="/static/login.js" defer></script>
 </body>
 </html>

@@ -1,10 +1,23 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-2 — 2026-11-07 — unprivileged install fix, bilingual UI
+
+- Remove `join-groupname: administrators`; DSM 7 blocks third-party packages from
+  requesting administrator membership. Add explicit `ctrl-script` entries with
+  `run-as: package` for every lifecycle action.
+- Grant the package account rw access to `OnlyFansDL` and the migration share
+  `OnlyFans` via the DSM data-share worker. No root or admin group is requested.
+- Add German/English switching to the web interface and login/setup pages.
+- Add a normal bilingual GitHub Pages site under `docs/`.
+- Clean the repository: remove legacy desktop helper scripts and historical
+  work documents; keep only package/build inputs, tests, docs and the wheelhouse.
+- Simplify package metadata and documentation wording.
+
 ## DSM 2.8.0-1 — 2026-11-07 — native Synology package
 
 - Add a native DSM 7.2 package (`OnlyFansDL-r1000-dsm72_2.8.0-1.spk`) for the
   DS723+ / `r1000`, with a private Python 3.13 environment from SynoCommunity
-  and an offline, hash-locked wheelhouse. No Docker and no Container Manager.
+  and an offline, hash-locked wheelhouse.
 - Split the runtime into a small standard-library control service (web UI,
   login, SQLite jobs, scheduling, status) and a short-lived worker process for
   downloads, subscription scans and previews. At most one worker runs at a time.

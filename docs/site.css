@@ -1,0 +1,83 @@
+:root {
+  --bg: #0b1017;
+  --bg2: #111924;
+  --line: #243247;
+  --text: #e8eef7;
+  --muted: #96a8bf;
+  --accent: #45c4b0;
+  --accent2: #6c8cff;
+  --radius: 16px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(1100px 520px at 15% -10%, rgba(69,196,176,.16), transparent 60%),
+    radial-gradient(900px 460px at 90% 0%, rgba(108,140,255,.14), transparent 55%),
+    var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 22px; }
+header.site {
+  position: sticky; top: 0; z-index: 10;
+  background: rgba(11,16,23,.82);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.nav { display: flex; align-items: center; gap: 18px; min-height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .01em; }
+.logo {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #061016; font-size: .82rem;
+}
+.nav .spacer { flex: 1; }
+.nav a, .nav span { font-size: .9rem; color: var(--muted); }
+.nav a:hover { color: var(--text); }
+.hero { padding: 78px 0 50px; }
+.eyebrow { color: var(--accent); font-weight: 700; font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; }
+h1 { font-size: clamp(2.1rem, 5vw, 3.5rem); line-height: 1.05; letter-spacing: -.03em; margin: 12px 0 18px; }
+.lead { font-size: 1.16rem; color: var(--muted); max-width: 740px; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 18px; border-radius: 11px; font-weight: 700;
+  border: 1px solid var(--line); color: var(--text); background: rgba(255,255,255,.04);
+}
+.btn:hover { text-decoration: none; border-color: #3a4d68; background: rgba(255,255,255,.08); }
+.btn.primary { background: linear-gradient(135deg, var(--accent), #2e9d8f); color: #04110f; border-color: transparent; }
+section { padding: 30px 0; }
+h2 { font-size: 1.55rem; letter-spacing: -.02em; margin: 0 0 16px; }
+h3 { font-size: 1.02rem; margin: 0 0 6px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); gap: 14px; }
+.card {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(23,34,49,.72), rgba(15,23,34,.78));
+  padding: 18px;
+}
+.card p { color: var(--muted); margin: 0; font-size: .93rem; }
+.shot { border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #0d141e; }
+.shot img { display: block; width: 100%; height: auto; }
+.split { display: grid; grid-template-columns: 1.1fr .9fr; gap: 24px; align-items: start; }
+ol.steps { counter-reset: step; list-style: none; padding: 0; margin: 0; }
+ol.steps li { position: relative; padding: 0 0 18px 44px; color: var(--muted); }
+ol.steps li::before {
+  counter-increment: step; content: counter(step);
+  position: absolute; left: 0; top: 0; width: 30px; height: 30px;
+  border-radius: 50%; display: grid; place-items: center;
+  border: 1px solid var(--line); color: var(--accent); font-weight: 800;
+}
+ol.steps b { color: var(--text); }
+.note { border-left: 3px solid var(--accent); padding: 10px 0 10px 16px; color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: rgba(255,255,255,.06); padding: .1em .35em; border-radius: 5px; font-size: .88em; }
+.badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.badge { border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; color: var(--muted); font-size: .78rem; }
+footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 26px 0 40px; color: var(--muted); font-size: .84rem; }
+@media (max-width: 760px) { .split { grid-template-columns: 1fr; } .hero { padding-top: 52px; } }

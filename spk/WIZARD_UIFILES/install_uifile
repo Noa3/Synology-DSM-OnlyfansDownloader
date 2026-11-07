@@ -3,7 +3,7 @@
     "step_title": "OnlyFans DL – web access",
     "items": [
       {
-        "desc": "The package installs a private Python 3.13 runtime and all required libraries. Docker, SSH, pip and Python commands are not needed. Python 3.13 comes from the SynoCommunity package source and is installed automatically as a dependency."
+        "desc": "The package installs a private Python 3.13 runtime and all required libraries. SSH, pip and Python commands are not needed. Python 3.13 comes from the SynoCommunity package source and is installed automatically as a dependency."
       },
       {
         "type": "password",

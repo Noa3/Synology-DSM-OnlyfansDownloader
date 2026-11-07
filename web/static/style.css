@@ -38,6 +38,20 @@ p { margin: .45rem 0; }
 a { color: var(--accent); }
 code { font-family: var(--mono); font-size: .86em; background: rgba(255, 255, 255, .05); padding: .1em .35em; border-radius: 5px; }
 .muted { color: var(--muted); }
+.lang-select {
+  width: auto;
+  min-width: 64px;
+  padding: 7px 9px;
+  font-size: .82rem;
+  font-weight: 600;
+}
+.auth-lang {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 5;
+}
+.auth-lang .lang-select { background: rgba(5, 10, 16, .75); }
 .path { font-family: var(--mono); font-size: .82rem; overflow-wrap: anywhere; word-break: break-all; }
 .error { color: var(--danger); min-height: 1.2em; margin: .4rem 0; }
 .hint { color: var(--muted); font-size: .86rem; }

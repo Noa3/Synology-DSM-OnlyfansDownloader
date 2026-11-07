@@ -15,7 +15,7 @@ pip-Befehle** erforderlich.
 
 ## 2. Paket installieren
 
-1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-1.spk` aus dem Release herunterladen.
+1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-2.spk` aus dem Release herunterladen.
 2. Package Center → **Manuell installieren** → Datei auswählen.
 3. DSM zeigt die Abhängigkeit **Python 3.13** an und installiert sie
    automatisch aus der SynoCommunity-Quelle.
@@ -47,13 +47,16 @@ Anmelden mit dem im Wizard gesetzten Passwort.
 ## 4. Downloadordner auswählen
 
 1. Reiter **Downloads** → **Durchsuchen**.
-2. Standardmäßig wird die Freigabe **OnlyFansDL** angelegt. Der Unterordner
-   `OnlyFans` ist voreingestellt.
-3. Für eine bestehende Bibliothek zum gewünschten Ordner navigieren, z. B.
-   `/volume1/OnlyFans`, und **Diesen Ordner wählen**.
-4. Der Ordner muss für den Dienst beschreibbar sein. Ein bestehender Ordner
-   wird nicht umbenannt oder geleert; `.ofdl.sqlite3`, `.part`-Dateien und die
-   vorhandene Struktur bleiben unverändert.
+2. Standardmäßig werden die Freigaben **OnlyFansDL** und **OnlyFans** für das
+   Dienstkonto vorbereitet. Der Unterordner `OnlyFansDL/OnlyFans` ist
+   voreingestellt. Eine bereits vorhandene Freigabe `OnlyFans` kann direkt als
+   bestehende Bibliothek ausgewählt werden.
+3. Für eine andere bestehende Bibliothek zum gewünschten Ordner navigieren.
+   Das Dienstkonto ist unprivilegiert und benötigt dort Les-/Schreibrecht;
+   andernfalls zeigt der Dialog einen Berechtigungsfehler. Alternativ die
+   Bibliothek in `OnlyFansDL` oder `OnlyFans` verschieben/kopieren.
+4. Ein bestehender Ordner wird nicht umbenannt oder geleert; `.ofdl.sqlite3`,
+   `.part`-Dateien und die vorhandene Struktur bleiben unverändert.
 
 Neue Unterordner können direkt im Dialog mit **Anlegen** erstellt werden.
 
@@ -134,9 +137,9 @@ das Manifest.
 Package Center → OnlyFans DL → Deinstallieren.
 
 Entfernt werden die privaten Steuerdaten, die venv und die Protokolle.
-**Nicht** entfernt werden die Freigabe `OnlyFansDL` und alle heruntergeladenen
-Dateien. Ein späteres Neuinstallieren findet die Bibliothek wieder, wenn
-derselbe Ordner ausgewählt wird.
+**Nicht** entfernt werden die Freigaben `OnlyFansDL`/`OnlyFans` und alle
+heruntergeladenen Dateien. Ein späteres Neuinstallieren findet die Bibliothek
+wieder, wenn derselbe Ordner ausgewählt wird.
 
 ## Fehlerbehebung
 
@@ -147,7 +150,7 @@ derselbe Ordner ausgewählt wird.
 | Anmeldung funktioniert nicht | Passwort aus dem Installations-Wizard verwenden. Bei vergessenem Passwort Paket deinstallieren und neu installieren (Downloads bleiben erhalten) oder die Steuerdaten zurücksetzen. |
 | „Keine Sitzung eingerichtet“ | Unter **Sitzung** importieren und testen. |
 | Sitzungstest schlägt fehl | Anfrage von `onlyfans.com/api2/v2/` kopieren, nicht von einer anderen Seite. Session kann an Netz/IP gebunden sein; im gleichen Netz wie der Browser testen. Cloudflare-Anfragen werden nicht umgangen. |
-| Downloadordner nicht beschreibbar | Im Ordner-Dialog einen Ordner unter einer Freigabe wählen, für die der Dienst Berechtigung hat. Die Freigabe `OnlyFansDL` wird automatisch berechtigt; andere Freigaben erfordern ggf. eine Freigabeberechtigung für `sc-onlyfansdl` in DSM. |
+| Downloadordner nicht beschreibbar | Einen Ordner unter `OnlyFansDL` oder `OnlyFans` wählen. Andere Freigaben benötigen eine Freigabeberechtigung für `sc-onlyfansdl`; das Paket fordert bewusst keine Administratorgruppe an. |
 | Kein DSM-Menüeintrag | Paket neu starten; `reloadui` wird beim Installieren gesetzt. Alternativ `http://<NAS-IP>:8765/` direkt öffnen. |
 | Viele Dateien, langsamer erster Lauf | Erwartet bei Altlayouts; Folgeläufe nutzen das Manifest. Keine Medien werden dauerhaft im Steuerdienst gehalten. |
 

@@ -401,17 +401,16 @@ class AppState:
 
     @staticmethod
     def apply_share_permissions(path: Path) -> None:
-        """Let DSM administrators read folders created by the package account."""
+        """Keep newly created folders writable for the package account.
+
+        DSM share ACLs and the administrator account remain in control.  The
+        service deliberately does not chown to an admin group; DSM 7 blocks
+        third-party packages from requesting administrator membership.
+        """
         if os.name != 'posix':
             return
-        try:
-            import grp
-            gid = grp.getgrnam('administrators').gr_gid
-            os.chown(path, -1, gid)
-            os.chmod(path, 0o2770)
-        except (KeyError, OSError, AttributeError):
-            with suppress(OSError):
-                os.chmod(path, 0o770)
+        with suppress(OSError):
+            os.chmod(path, 0o770)
 
     def output_dir(self) -> Path | None:
         with control_db.connect(self.paths.db) as db:
@@ -436,9 +435,14 @@ class AppState:
             last_run = control_db.get_setting(db, 'schedule_last_run', '')
             output_dir = control_db.get_setting(db, 'output_dir', '')
         share = resolve_share_root(self.paths)
+        share_default = default_output_dir(self.paths)
         return {
-            'output_dir': output_dir or (str(share / 'OnlyFans') if share else ''),
-            'share': {'name': DEFAULT_SHARE_NAME, 'root': str(share) if share else ''},
+            'output_dir': output_dir or (str(share_default) if share_default else ''),
+            'share': {
+                'name': share.name if share else DEFAULT_SHARE_NAME,
+                'root': str(share) if share else '',
+                'default_output': str(share_default) if share_default else '',
+            },
             'schedule': schedule if isinstance(schedule, dict) else {'enabled': False, 'time': '03:30', 'options': {}},
             'schedule_last_run': last_run,
             'download_defaults': defaults if isinstance(defaults, dict) else {},
@@ -984,6 +988,8 @@ class RequestHandler(BaseHTTPRequestHandler):
         self_memory = _proc_memory(os.getpid())
         session = self.state.session_store.describe()
         session['verified'] = verified
+        share = resolve_share_root(self.state.paths)
+        share_default = default_output_dir(self.state.paths)
         return {
             'version': SERVICE_VERSION,
             'package_version': PACKAGE_VERSION,
@@ -995,8 +1001,11 @@ class RequestHandler(BaseHTTPRequestHandler):
             'schedule': schedule,
             'schedule_last_run': last_run,
             'output_dir': str(output) if output else '',
-            'share': {'name': DEFAULT_SHARE_NAME,
-                      'root': str(resolve_share_root(self.state.paths) or '')},
+            'share': {
+                'name': share.name if share else DEFAULT_SHARE_NAME,
+                'root': str(share) if share else '',
+                'default_output': str(share_default) if share_default else '',
+            },
             'disk': disk,
             'library': self.state.library(),
             'memory': {'service_pid': os.getpid(), **self_memory, 'worker': worker_memory},

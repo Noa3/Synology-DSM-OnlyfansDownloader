@@ -1,4 +1,4 @@
-# Testbericht — OnlyFans DL für Synology DSM 2.8.0-1
+# Testbericht — OnlyFans DL für Synology DSM 2.8.0-2
 
 Build-Datum: **2026-11-07**
 Zielplattform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 aus SynoCommunity**
@@ -63,15 +63,15 @@ Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
 ## Paketprüfung
 
 ```
-Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-1.spk
-Größe:  21,97 MiB
-SHA256: 6085af1520542ffb8a8174af126fd91258a168b531f2e5f767409bf6d9a58047
-MD5(package.tgz): c8561e1e626c43132185225f4d524735
+Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-2.spk
+Größe:  21,98 MiB
+SHA256: 93186d4c85f34333d66a3d4aee4e1b38b427af9317fcb08fea74455d6bd3673e
+MD5(package.tgz): db55d58339c0425cefafcfe6803c28fa
 ```
 
 Geprüft:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-1`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-2`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
   `install_dep_packages=python313>=3.13.11-9`, MD5-Checksumme stimmt.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
@@ -83,11 +83,15 @@ Geprüft:
   kein `@ACTION@` mehr.
 - `conf/privilege`, `conf/resource`, `WIZARD_UIFILES/*`, `ui/config` sind
   gültiges JSON; `bash -n` parst alle Shell-Skripte.
+- `conf/privilege`: `run-as: package`, `sc-onlyfansdl`, **kein**
+  `join-groupname`, alle `ctrl-script`-Aktionen laufen als `package`.
+- `conf/resource`: Freigaben `OnlyFansDL` und `OnlyFans`, jeweils rw für
+  `sc-onlyfansdl`.
 - Zwei Builds mit `SOURCE_DATE_EPOCH=1794009600` sind byte-identisch.
 
   Byte-Identität gilt für dieselbe Plattform/zlib-Version. Der CI-Linux-Build
   kann andere gzip-Bytes erzeugen; Quelltext, Lockfile und Wheels sind identisch.
-  Der Release-Asset ist der hier geprüfte Windows-Build (`1b043...`).
+  Der Release-Asset ist der hier geprüfte Windows-Build.
 
 ## Browser-UI
 
@@ -96,12 +100,13 @@ Playwright (Chromium, headless, 1440×1100) hat den vollständigen Ablauf geprü
 - Login-Seite → Anmeldung → Übersicht
 - Downloads → Ordnerdialog → Session-Tab → Sitzungsimport
 - Einstellungen
+- Sprachumschaltung Deutsch/Englisch in Login, Setup und Hauptoberfläche
 - keine `console.error`/`pageerror`-Meldungen
 - keine externen Ressourcen (CSP-konform)
 
-Screenshots: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-folders.png`,
-`docs/dsm-ui-session.png`, `docs/dsm-ui-session-tested.png`,
-`docs/dsm-ui-settings.png`.
+Screenshots: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`,
+`docs/dsm-ui-folders.png`, `docs/dsm-ui-session.png`,
+`docs/dsm-ui-session-tested.png`, `docs/dsm-ui-settings.png`.
 
 ## Speichermessung (lokal, nur Indiz)
 
