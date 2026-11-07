@@ -17,6 +17,7 @@ Testumgebung: Windows 11, CPython 3.13.12, Chromium/Playwright
 | --- | --- | --- |
 | Vollständige Python-Testsuite | **363 Tests, 0 Fehler, 3 Skips** | lokal |
 | DSM-spezifische Tests | **69 Tests, 0 Fehler, 2 Linux-Skips** | lokal |
+| DSM-spezifische Tests inkl. echter Prozessgruppen | **69 Tests, 0 Fehler, keine Skips** | Linux-CI |
 | Paketbau | **bestanden** | lokal |
 | Reproduzierbarer Bau (zweimal) | **byte-identisch** | lokal |
 | Browser-UI (Playwright) | **bestanden**, keine Konsolenfehler | lokal |
@@ -94,9 +95,9 @@ Geprüft:
   keinen automatisch ermittelten Freigabepfad.
 - Zwei Builds mit `SOURCE_DATE_EPOCH=1794009600` sind byte-identisch.
 
-  Byte-Identität gilt für dieselbe Plattform/zlib-Version. Der CI-Linux-Build
-  kann andere gzip-Bytes erzeugen; Quelltext, Lockfile und Wheels sind identisch.
-  Der Release-Asset ist der hier geprüfte Windows-Build.
+  Windows-Build und Linux-CI-Build haben beide den oben genannten SHA256.
+  Der Release-Asset ist der lokal geprüfte Windows-Build. Abweichende zukünftige
+  zlib-Versionen könnten andere gzip-Bytes erzeugen.
 
 ## Browser-UI
 
@@ -189,7 +190,10 @@ des Dienstes und des aktiven Workers an.
 
 ## Bekannte, nicht geprüfte Punkte
 
-Linux-CI-Ergebnis wird nach dem gepushten Implementierungsstand ergänzt.
+Linux-CI auf Implementierungscommit `ffd3124d04f79b5dffd7db5f2b90721f9cf45fc5`:
+[`42357026929`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42357026929),
+`Ran 69 tests in 22.421s`, `OK`, keine Skips. Enthält die echten Linux-Tests
+für Worker-Kindgruppen und Dienststop ohne PID-Datei. **Kein DSM-Hardwaretest.**
 
 - **Keine echte OnlyFans-Sitzung** und kein echter Mediendownload in dieser
   Umgebung. Die API-/Signatur-/Cloudflare-Kompatibilität kann sich ändern.

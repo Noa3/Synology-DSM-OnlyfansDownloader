@@ -8,7 +8,8 @@ entstehen. / The full current report is maintained in one place:
 ## 2.8.0-5
 
 - 363 local Python tests: zero failures, three Windows skips. 69 DSM-specific
-  tests: zero failures, two real-Linux skips. Linux CI: central report above.
+  tests: zero failures, two real-Linux skips. Linux CI ran all 69 DSM tests with
+  zero failures and no skips, including real process-tree/service-stop tests.
 - Browser regression: seven languages, simulated DSM locale/override, reload
   during work, separate event/boot failures, reconnection, scan/file progress,
   mobile width, explicit storage and session persistence passed locally.
