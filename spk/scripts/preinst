@@ -1,0 +1,7 @@
+#!/bin/sh
+# DSM pre-install: nothing destructive. Dependencies are handled by Package Center.
+set -u
+PKGDEST="${SYNOPKG_PKGDEST:-/var/packages/OnlyFansDL/target}"
+PKGVAR="${SYNOPKG_PKGVAR:-/var/packages/OnlyFansDL/var}"
+mkdir -p "$PKGVAR" 2>/dev/null || true
+exit 0

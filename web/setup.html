@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>OnlyFans DL · Ersteinrichtung</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-page" data-mode="setup">
+  <main class="auth-card" aria-labelledby="auth-title">
+    <div class="brand-mark" aria-hidden="true">OF</div>
+    <h1 id="auth-title">Ersteinrichtung</h1>
+    <p class="muted">Lege das Passwort für die Weboberfläche fest.</p>
+    <form id="auth-form" autocomplete="off">
+      <label for="password">Neues Passwort (mindestens 10 Zeichen)</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="10" required autofocus>
+      <label for="confirm">Passwort wiederholen</label>
+      <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required>
+      <p id="auth-error" class="error" role="alert"></p>
+      <button id="auth-submit" class="primary" type="submit">Passwort speichern</button>
+    </form>
+    <p class="hint">Das Paket legt normalerweise bereits bei der Installation ein Passwort an. Diese Seite erscheint nur, wenn das nicht geschehen ist.</p>
+  </main>
+  <script src="/static/login.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+[
+  {
+    "step_title": "OnlyFans DL – web access",
+    "items": [
+      {
+        "desc": "The package installs a private Python 3.13 runtime and all required libraries. Docker, SSH, pip and Python commands are not needed. Python 3.13 comes from the SynoCommunity package source and is installed automatically as a dependency."
+      },
+      {
+        "type": "password",
+        "desc": "Choose the password for the DSM web interface. It is stored only on this NAS.",
+        "subitems": [
+          {
+            "key": "wizard_app_password",
+            "desc": "Web password (at least 10 characters)",
+            "validator": {
+              "allowBlank": false,
+              "minLength": 10,
+              "maxLength": 100
+            }
+          }
+        ]
+      },
+      {
+        "type": "password",
+        "desc": "Repeat the password.",
+        "subitems": [
+          {
+            "key": "wizard_app_password_confirm",
+            "desc": "Repeat web password",
+            "validator": {
+              "allowBlank": false,
+              "minLength": 10,
+              "maxLength": 100
+            }
+          }
+        ]
+      },
+      {
+        "desc": "The shared folder OnlyFansDL is created automatically. The download folder defaults to OnlyFansDL/OnlyFans and can be changed later in the web interface. Existing libraries and .ofdl.sqlite3 manifests can be selected there."
+      }
+    ]
+  }
+]

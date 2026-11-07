@@ -1,0 +1,11 @@
+#!/bin/sh
+# Stop the old service before an upgrade replaces package files.
+set -u
+PKGROOT="${SYNOPKG_PKGROOT:-/var/packages/OnlyFansDL}"
+if [ -x "$PKGROOT/target/scripts/start-stop-status" ]; then
+    "$PKGROOT/target/scripts/start-stop-status" stop >/dev/null 2>&1 || true
+fi
+if [ -x "$PKGROOT/scripts/start-stop-status" ]; then
+    "$PKGROOT/scripts/start-stop-status" stop >/dev/null 2>&1 || true
+fi
+exit 0

@@ -1,0 +1,109 @@
+#!/bin/sh
+# DSM start/stop/status for the OnlyFans DL control service.
+set -u
+
+PKGDEST="${SYNOPKG_PKGDEST:-/var/packages/OnlyFansDL/target}"
+PKGVAR="${SYNOPKG_PKGVAR:-/var/packages/OnlyFansDL/var}"
+PKGROOT="${SYNOPKG_PKGROOT:-$(dirname "$PKGDEST")}"
+DATA="$PKGVAR/data"
+LOGS="$PKGVAR/logs"
+CONFIG="$PKGVAR/config"
+TMP="$PKGVAR/tmp"
+HOME_DIR="$PKGVAR/home"
+VENV="$PKGVAR/venv"
+PIDFILE="$PKGVAR/service.pid"
+LOG="$LOGS/service.log"
+PORT="${OFDL_PORT:-8765}"
+
+SHARE="$PKGROOT/shares/OnlyFansDL"
+if [ ! -d "$SHARE" ]; then
+    for candidate in /volume*/OnlyFansDL; do
+        if [ -d "$candidate" ]; then
+            SHARE="$candidate"
+            break
+        fi
+    done
+fi
+
+is_running() {
+    [ -f "$PIDFILE" ] || return 1
+    pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+case "${1:-}" in
+    start)
+        if is_running; then
+            exit 0
+        fi
+        if [ ! -x "$VENV/bin/python" ]; then
+            echo "Python environment missing; reinstall the package." >&2
+            exit 1
+        fi
+        mkdir -p "$DATA" "$LOGS" "$CONFIG" "$TMP" "$HOME_DIR" 2>/dev/null || true
+        chmod 700 "$DATA" "$LOGS" "$CONFIG" "$TMP" "$HOME_DIR" 2>/dev/null || true
+        umask 077
+        cd "$PKGDEST" || exit 1
+        PYTHONPATH="$PKGDEST" \
+        PYTHONUNBUFFERED=1 \
+        PYTHONDONTWRITEBYTECODE=1 \
+        SYNOPKG_PKGDEST="$PKGDEST" \
+        SYNOPKG_PKGVAR="$PKGVAR" \
+        OFDL_DATA_DIR="$DATA" \
+        OFDL_CONFIG_DIR="$CONFIG" \
+        OFDL_LOG_DIR="$LOGS" \
+        OFDL_PREVIEW_DIR="$DATA/previews" \
+        OFDL_TMP_DIR="$TMP" \
+        OFDL_HOME="$HOME_DIR" \
+        OFDL_SHARE_ROOT="$SHARE" \
+        OFDL_VENV="$VENV" \
+        OFDL_BIND="${OFDL_BIND:-0.0.0.0}" \
+        OFDL_PORT="$PORT" \
+        XDG_CONFIG_HOME="$CONFIG" \
+        HOME="$HOME_DIR" \
+        TMPDIR="$TMP" \
+        nohup "$VENV/bin/python" -m ofdl.dsm.service --host "${OFDL_BIND:-0.0.0.0}" --port "$PORT" \
+            >> "$LOG" 2>&1 &
+        echo $! > "$PIDFILE"
+        chmod 600 "$PIDFILE" 2>/dev/null || true
+        i=0
+        while [ "$i" -lt 10 ]; do
+            if is_running; then
+                exit 0
+            fi
+            sleep 1
+            i=$((i + 1))
+        done
+        rm -f "$PIDFILE"
+        echo "Service failed to start; see $LOG" >&2
+        exit 1
+        ;;
+    stop)
+        if [ -f "$PIDFILE" ]; then
+            pid="$(cat "$PIDFILE" 2>/dev/null || true)"
+            if [ -n "$pid" ]; then
+                kill -TERM "$pid" 2>/dev/null || true
+                i=0
+                while [ "$i" -lt 15 ] && kill -0 "$pid" 2>/dev/null; do
+                    sleep 1
+                    i=$((i + 1))
+                done
+                if kill -0 "$pid" 2>/dev/null; then
+                    kill -KILL "$pid" 2>/dev/null || true
+                fi
+            fi
+            rm -f "$PIDFILE"
+        fi
+        exit 0
+        ;;
+    status)
+        if is_running; then
+            exit 0
+        fi
+        exit 1
+        ;;
+    *)
+        echo "usage: $0 {start|stop|status}" >&2
+        exit 1
+        ;;
+esac

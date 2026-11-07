@@ -1,0 +1,16 @@
+{
+  ".url": {
+    "com.noa3.onlyfansdl": {
+      "type": "url",
+      "icon": "images/icon_{0}.png",
+      "title": "OnlyFans DL",
+      "desc": "Nativer Downloader für Synology DSM",
+      "url": "/",
+      "port": "8765",
+      "protocol": "http",
+      "allUsers": false,
+      "grantPrivilege": "all",
+      "advanceGrantPrivilege": true
+    }
+  }
+}

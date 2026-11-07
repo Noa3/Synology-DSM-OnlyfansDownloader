@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>OnlyFans DL · DSM</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="app-page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark small" aria-hidden="true">OF</div>
+      <div>
+        <strong>OnlyFans DL</strong>
+        <span id="version-label" class="muted"></span>
+      </div>
+    </div>
+    <div class="top-status" title="Status des Steuerdienstes">
+      <span id="service-dot" class="dot"></span>
+      <span id="service-label">Dienst wird geprüft …</span>
+    </div>
+    <div class="top-actions">
+      <button id="refresh-button" class="ghost" type="button">Aktualisieren</button>
+      <button id="logout-button" class="ghost" type="button">Abmelden</button>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Bereiche">
+    <button class="tab active" type="button" role="tab" data-tab="dashboard" aria-selected="true">Übersicht</button>
+    <button class="tab" type="button" role="tab" data-tab="downloads" aria-selected="false">Downloads</button>
+    <button class="tab" type="button" role="tab" data-tab="session" aria-selected="false">Sitzung</button>
+    <button class="tab" type="button" role="tab" data-tab="library" aria-selected="false">Bibliothek</button>
+    <button class="tab" type="button" role="tab" data-tab="settings" aria-selected="false">Einstellungen</button>
+  </nav>
+
+  <main class="content">
+    <section id="tab-dashboard" class="tab-panel active" role="tabpanel" aria-labelledby="tab-dashboard">
+      <div class="grid two">
+        <article class="card job-card">
+          <div class="card-head">
+            <h2>Auftrag</h2>
+            <span id="job-status" class="pill">Leerlauf</span>
+          </div>
+          <p id="job-empty" class="muted">Kein Auftrag aktiv. Downloads und Bibliotheksscans laufen in einem separaten Prozess und werden nach dem Ende beendet.</p>
+          <div id="job-active" hidden>
+            <h3 id="job-title">Auftrag</h3>
+            <p id="job-phase" class="muted">Wird vorbereitet …</p>
+            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+              <div id="job-progress-bar" class="progress-bar"></div>
+            </div>
+            <div class="progress-row">
+              <span id="job-progress-text">0 / 0</span>
+              <span id="job-speed" class="muted"></span>
+            </div>
+            <div id="job-stats" class="stats"></div>
+            <div class="button-row">
+              <button id="job-pause" class="ghost" type="button">Pause</button>
+              <button id="job-cancel" class="danger" type="button">Abbrechen</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Dienst</h2><span id="service-badge" class="pill">Online</span></div>
+          <dl class="facts">
+            <div><dt>Laufzeit</dt><dd id="fact-uptime">–</dd></div>
+            <div><dt>Speicher (PSS / RSS)</dt><dd id="fact-memory">–</dd></div>
+            <div><dt>Downloadordner</dt><dd id="fact-output" class="path">–</dd></div>
+            <div><dt>Freigabe</dt><dd id="fact-share" class="path">–</dd></div>
+            <div><dt>Datenträger frei</dt><dd id="fact-disk">–</dd></div>
+          </dl>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h2>Letzte Aktivität</h2>
+          <span id="event-count" class="muted"></span>
+        </div>
+        <ol id="event-list" class="event-list" aria-live="polite">
+          <li class="muted">Noch keine Ereignisse in dieser Sitzung.</li>
+        </ol>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h2>Letzte Aufträge</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Typ</th><th>Status</th><th>Ergebnis</th><th>Beendet</th></tr></thead>
+            <tbody id="recent-jobs"><tr><td colspan="5" class="muted">Noch keine Aufträge.</td></tr></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="tab-downloads" class="tab-panel" role="tabpanel" aria-labelledby="tab-downloads" hidden>
+      <form id="download-form" class="stack">
+        <article class="card">
+          <div class="card-head"><h2>Zielordner</h2></div>
+          <div class="field-row">
+            <input id="output-dir" type="text" spellcheck="false" autocomplete="off" aria-label="Downloadordner">
+            <button id="browse-folder" class="ghost" type="button">Durchsuchen</button>
+            <button id="use-default-folder" class="ghost" type="button">Standard</button>
+          </div>
+          <p class="hint">Der Ordner liegt auf dem NAS. Bestehende Dateien, Unterordner und <code>.ofdl.sqlite3</code> werden weiterverwendet.</p>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Creator</h2></div>
+          <label class="check-row">
+            <input id="all-subscriptions" type="checkbox">
+            <span>Alle aktiven Abonnements verwenden</span>
+          </label>
+          <label for="creator-names">Nur diese Creator (Namen oder Profil-URLs, durch Komma/Zeile getrennt)</label>
+          <textarea id="creator-names" rows="3" spellcheck="false" placeholder="creator1, creator2"></textarea>
+          <div class="field-row">
+            <button id="load-subscriptions" class="ghost" type="button">Abonnements laden</button>
+            <button id="clear-creators" class="ghost" type="button">Auswahl löschen</button>
+            <span id="creator-selection" class="muted">0 ausgewählt</span>
+          </div>
+          <div class="field-row">
+            <input id="creator-search" type="search" placeholder="Creator suchen …" aria-label="Creator suchen">
+          </div>
+          <div id="creator-list" class="creator-list" aria-live="polite">
+            <p class="muted">Noch keine Abonnementliste geladen. „Abonnements laden“ startet einen kurzen Auftrag.</p>
+          </div>
+          <div class="button-row">
+            <button id="creator-prev" class="ghost" type="button" disabled>Zurück</button>
+            <span id="creator-page" class="muted">Seite 1</span>
+            <button id="creator-next" class="ghost" type="button" disabled>Weiter</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Inhalte und Filter</h2></div>
+          <fieldset>
+            <legend>Kategorien</legend>
+            <div class="check-grid">
+              <label><input type="checkbox" data-category="posts" checked> Posts</label>
+              <label><input type="checkbox" data-category="archived" checked> Archiviert</label>
+              <label><input type="checkbox" data-category="stories" checked> Stories</label>
+              <label><input type="checkbox" data-category="messages" checked> Nachrichten</label>
+              <label><input type="checkbox" data-category="purchased" checked> Gekauft</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Dateitypen</legend>
+            <div class="check-grid">
+              <label><input id="type-photos" type="checkbox" checked> Fotos</label>
+              <label><input id="type-videos" type="checkbox" checked> Videos</label>
+              <label><input id="type-audio" type="checkbox" checked> Audio</label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Optionen</legend>
+            <div class="check-grid">
+              <label><input id="opt-albums" type="checkbox" checked> Alben-Unterordner</label>
+              <label><input id="opt-subfolders" type="checkbox" checked> Kategorie-Unterordner</label>
+              <label><input id="opt-previews" type="checkbox"> Vorschau erlauben, wenn Original fehlt</label>
+            </div>
+          </fieldset>
+          <div class="field-row">
+            <label for="since-days">Nur die letzten Tage (0 = alle)</label>
+            <input id="since-days" type="number" min="0" max="36500" step="1" value="0">
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Start</h2></div>
+          <div class="button-row">
+            <button id="start-download" class="primary" type="submit">Download starten</button>
+            <button id="start-scan" class="ghost" type="button">Nur suchen (Scan)</button>
+            <button id="save-defaults" class="ghost" type="button">Als Zeitplan-Standard speichern</button>
+          </div>
+          <p id="download-message" class="hint" role="status"></p>
+        </article>
+      </form>
+    </section>
+
+    <section id="tab-session" class="tab-panel" role="tabpanel" aria-labelledby="tab-session" hidden>
+      <div class="grid two">
+        <article class="card">
+          <div class="card-head"><h2>Sitzungsstatus</h2><span id="session-state" class="pill">Unbekannt</span></div>
+          <dl class="facts">
+            <div><dt>Konto-ID</dt><dd id="session-user">–</dd></div>
+            <div><dt>Ablage</dt><dd class="path">/var/packages/OnlyFansDL/var/data/session.json (0600)</dd></div>
+          </dl>
+          <p class="hint">Die Sitzung wird nur auf dem NAS gespeichert. Sie wird nie an Dritte gesendet und nicht in Einstellungen oder Protokollen abgelegt.</p>
+          <div class="button-row">
+            <button id="test-session" class="primary" type="button">Sitzung testen</button>
+            <button id="clear-session" class="danger" type="button">Sitzung löschen</button>
+          </div>
+          <div id="session-result" class="result-box" role="status"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head"><h2>Sitzung importieren</h2></div>
+          <label for="session-text">cURL (bash), HAR, JSON oder Roh-Header aus deinem eingeloggten Browser</label>
+          <textarea id="session-text" rows="10" spellcheck="false" placeholder="curl 'https://onlyfans.com/api2/v2/...' -H 'Cookie: ...' -H 'user-id: ...' -H 'x-bc: ...' -H 'user-agent: ...'"></textarea>
+          <div class="button-row">
+            <button id="import-session" class="primary" type="button">Importieren</button>
+          </div>
+          <p class="hint">Kopiere eine Anfrage an <code>https://onlyfans.com/api2/v2/</code>. Der Import wird nie ausgeführt. Ein HAR kann groß sein; maximal 2 MB.</p>
+        </article>
+      </div>
+
+      <article class="card">
+        <div class="card-head"><h2>Netzwerk</h2></div>
+        <label for="proxy">Optionaler Proxy (http://, https://, socks5://, socks5h://)</label>
+        <div class="field-row">
+          <input id="proxy" type="text" spellcheck="false" placeholder="http://192.168.1.10:8080">
+          <button id="save-proxy" class="ghost" type="button">Speichern</button>
+          <button id="clear-proxy" class="ghost" type="button">Entfernen</button>
+        </div>
+        <p class="hint">Der Proxy wird für API, Regeln und Medien verwendet. Zugangsdaten werden in der Oberfläche maskiert. Leer lassen für direkt.</p>
+        <label for="rules-source">Regelquelle (HTTPS-URL oder lokaler JSON-Pfad)</label>
+        <div class="field-row">
+          <input id="rules-source" type="text" spellcheck="false" placeholder="Standard: DATAHOARDERS dynamic-rules">
+          <button id="save-rules" class="ghost" type="button">Speichern</button>
+        </div>
+      </article>
+    </section>
+
+    <section id="tab-library" class="tab-panel" role="tabpanel" aria-labelledby="tab-library" hidden>
+      <article class="card">
+        <div class="card-head"><h2>Bibliothek</h2><button id="refresh-library" class="ghost" type="button">Aktualisieren</button></div>
+        <dl class="facts wide">
+          <div><dt>Ordner</dt><dd id="library-output" class="path">–</dd></div>
+          <div><dt>Manifest</dt><dd id="library-manifest">–</dd></div>
+          <div><dt>Einträge</dt><dd id="library-files">–</dd></div>
+          <div><dt>Erfasste Größe</dt><dd id="library-bytes">–</dd></div>
+          <div><dt>Schreibbar</dt><dd id="library-writable">–</dd></div>
+          <div><dt>Freier Platz</dt><dd id="library-disk">–</dd></div>
+        </dl>
+        <p class="hint">Die Zählung kommt aus dem vorhandenen <code>.ofdl.sqlite3</code> und liest keine Mediendateien. Ein bestehender Ordner kann im Download-Bereich ausgewählt werden; die Dateistruktur bleibt unverändert.</p>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2>Hinweise für große Bibliotheken</h2></div>
+        <ul class="bullets">
+          <li>Die Oberfläche lädt nie die ganze Bibliothek. Creator-Listen und Ereignisse sind seitenweise und begrenzt.</li>
+          <li>Der Steuerdienst hält keine Downloadlisten, Dateiverzeichnisse oder Vorschaudaten im Speicher.</li>
+          <li>Der Worker verarbeitet Medien als Datenstrom und beendet sich nach dem Auftrag.</li>
+          <li>Bei rund 80.000 Dateien kann ein Erstlauf länger dauern; spätere Läufe nutzen das Manifest und exakte Pfade.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="tab-settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <article class="card">
+        <div class="card-head"><h2>Zeitplan</h2></div>
+        <label class="check-row">
+          <input id="schedule-enabled" type="checkbox">
+          <span>Täglicher Download automatisch starten</span>
+        </label>
+        <div class="field-row">
+          <label for="schedule-time">Uhrzeit (NAS-Zeit)</label>
+          <input id="schedule-time" type="time" value="03:30">
+          <button id="save-schedule" class="ghost" type="button">Zeitplan speichern</button>
+        </div>
+        <p class="hint">Der Zeitplan verwendet die aktuellen Download-Einstellungen aus dem Download-Bereich. Es läuft nie mehr als ein Auftrag gleichzeitig. Ein verpasster Lauf wird am selben Tag nachgeholt, sofern der Dienst dann läuft.</p>
+        <dl class="facts">
+          <div><dt>Letzter Lauf</dt><dd id="schedule-last">–</dd></div>
+          <div><dt>Nächster Lauf</dt><dd id="schedule-next">–</dd></div>
+        </dl>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h2>Passwort ändern</h2></div>
+        <form id="password-form" class="stack compact" autocomplete="off">
+          <label for="current-password">Aktuelles Passwort</label>
+          <input id="current-password" type="password" autocomplete="current-password" required>
+          <label for="new-password">Neues Passwort (mindestens 10 Zeichen)</label>
+          <input id="new-password" type="password" autocomplete="new-password" minlength="10" required>
+          <label for="confirm-password">Neues Passwort wiederholen</label>
+          <input id="confirm-password" type="password" autocomplete="new-password" minlength="10" required>
+          <div class="button-row"><button class="primary" type="submit">Passwort ändern</button></div>
+        </form>
+      </article>
+
+      <article class="card">
+        <div class="card-head"><h2>Über das Paket</h2></div>
+        <dl class="facts wide">
+          <div><dt>App-Version</dt><dd id="about-version">–</dd></div>
+          <div><dt>Paketversion</dt><dd id="about-package">–</dd></div>
+          <div><dt>Laufzeit</dt><dd>SynoCommunity Python 3.13 · private venv</dd></div>
+          <div><dt>Prozessmodell</dt><dd>1 Steuerdienst + 1 kurzlebiger Worker</dd></div>
+          <div><dt>Speicherziel</dt><dd>≤ 50 MiB PSS im Leerlauf (auf DS723+ zu messen)</dd></div>
+        </dl>
+        <p class="hint">Desktop-App und CLI bleiben im Paket enthalten. Diese Oberfläche ist eine statische Browseroberfläche; sie lädt keine externen Schriftarten, Skripte oder Bilder.</p>
+      </article>
+    </section>
+  </main>
+
+  <div id="folder-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="folder-title">
+    <div class="modal-card">
+      <div class="card-head"><h2 id="folder-title">Downloadordner wählen</h2><button id="folder-close" class="ghost" type="button">Schließen</button></div>
+      <p id="folder-path" class="path">–</p>
+      <div id="folder-roots" class="root-list"></div>
+      <div class="field-row">
+        <button id="folder-up" class="ghost" type="button">Übergeordnet</button>
+        <input id="new-folder-name" type="text" placeholder="Neuer Unterordner" aria-label="Neuer Unterordner">
+        <button id="create-folder" class="ghost" type="button">Anlegen</button>
+      </div>
+      <div id="folder-list" class="folder-list" aria-live="polite"></div>
+      <div class="button-row">
+        <button id="folder-select" class="primary" type="button">Diesen Ordner wählen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

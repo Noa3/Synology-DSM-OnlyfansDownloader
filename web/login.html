@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>OnlyFans DL · Anmeldung</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-page" data-mode="login">
+  <main class="auth-card" aria-labelledby="auth-title">
+    <div class="brand-mark" aria-hidden="true">OF</div>
+    <h1 id="auth-title">OnlyFans DL</h1>
+    <p class="muted">Synology DSM · geschützte Weboberfläche</p>
+    <form id="auth-form" autocomplete="on">
+      <label for="password">Passwort</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+      <p id="auth-error" class="error" role="alert"></p>
+      <button id="auth-submit" class="primary" type="submit">Anmelden</button>
+    </form>
+    <p class="hint">Das Passwort wurde bei der Paketinstallation festgelegt. Es wird nur auf diesem NAS gespeichert.</p>
+  </main>
+  <script src="/static/login.js" defer></script>
+</body>
+</html>

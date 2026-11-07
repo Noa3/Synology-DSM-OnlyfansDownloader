@@ -1,0 +1,3 @@
+# Optional: Browser login helper and automatic WebRTC live recording.
+# Afterwards run: python -m playwright install chromium
+playwright>=1.57,<2

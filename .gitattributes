@@ -1,0 +1,19 @@
+* text=auto
+*.py text eol=lf
+*.sh text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.svg text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.lock text eol=lf
+*.in text eol=lf
+spk/scripts/* text eol=lf
+spk/conf/* text eol=lf
+spk/ui/config text eol=lf
+spk/WIZARD_UIFILES/* text eol=lf
+*.whl binary
+*.png binary
+*.spk binary

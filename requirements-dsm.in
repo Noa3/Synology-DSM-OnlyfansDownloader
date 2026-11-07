@@ -1,0 +1,9 @@
+# Runtime dependencies for the DSM worker.
+# The control service itself uses only the Python standard library.
+# Versions are pinned; tools/fetch_wheels.py generates requirements-dsm.lock
+# with SHA-256 hashes for an offline, reproducible install.
+requests==2.34.2
+PySocks==1.7.1
+m3u8==6.0.0
+Pillow==12.2.0
+curl_cffi==0.17.0
