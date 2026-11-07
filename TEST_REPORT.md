@@ -96,7 +96,8 @@ Playwright (Chromium, headless, 1440×1100) hat den vollständigen Ablauf geprü
 - keine externen Ressourcen (CSP-konform)
 
 Screenshots: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-folders.png`,
-`docs/dsm-ui-session.png`, `docs/dsm-ui-settings.png`.
+`docs/dsm-ui-session.png`, `docs/dsm-ui-session-tested.png`,
+`docs/dsm-ui-settings.png`.
 
 ## Speichermessung (lokal, nur Indiz)
 
