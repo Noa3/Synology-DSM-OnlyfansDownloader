@@ -99,7 +99,7 @@
   }
 
   function locale() {
-    return (window.ofdlI18n && window.ofdlI18n.getLanguage() === 'en') ? 'en-US' : 'de-DE';
+    return window.ofdlI18n ? window.ofdlI18n.getLanguage() : 'de';
   }
 
   function splitProfiles(text) {
@@ -225,6 +225,8 @@
     $('library-files').textContent = library.manifest ? String(library.files || 0) : '–';
     $('library-bytes').textContent = library.manifest ? formatBytes(library.bytes) : '–';
     $('library-writable').textContent = library.writable ? t('ja') : t('nein');
+    $('library-error').textContent = library.error
+      ? t('Das Manifest konnte nicht gelesen werden. Pfad und Berechtigungen prüfen.') : '';
     const disk = state.status && state.status.disk;
     $('library-disk').textContent = disk ? `${disk.free_text} ${t('frei')}` : '–';
   }
@@ -515,7 +517,7 @@
   /* ------------------------------------------------------------------ */
 
   function outputDirValue() {
-    return $('output-dir').value.trim();
+    return (state.settings && state.settings.output_dir) || '';
   }
 
   function collectDownloadOptions(dryRun = false) {
@@ -559,7 +561,6 @@
 
   function applyDownloadDefaults(defaults) {
     if (!defaults || !Object.keys(defaults).length) return;
-    if (!$('output-dir').value && defaults.output_dir) $('output-dir').value = defaults.output_dir;
     if (Array.isArray(defaults.profiles) && !$('creator-names').value) {
       $('creator-names').value = defaults.profiles.join(', ');
     }
@@ -584,7 +585,7 @@
   async function loadSettings() {
     const settings = await api('/api/settings');
     state.settings = settings;
-    if (!$('output-dir').value) $('output-dir').value = settings.output_dir || '';
+    applyLibraryPath(settings);
     const schedule = settings.schedule || {};
     $('schedule-enabled').checked = Boolean(schedule.enabled);
     $('schedule-time').value = schedule.time || '03:30';
@@ -603,6 +604,29 @@
     state.settingsLoaded = true;
     updateCreatorSelection();
     loadCreators(1).catch(() => {});
+  }
+
+  function applyLibraryPath(settings) {
+    $('output-dir').value = settings.output_dir || '';
+    $('library-dir').value = settings.output_dir || '';
+    $('storage-setup').hidden = Boolean(settings.output_dir);
+  }
+
+  async function saveLibraryPath() {
+    const path = $('library-dir').value.trim();
+    if (!path) { toast(t('Bitte einen Downloadordner auswählen.'), 'bad'); return; }
+    const button = $('save-library');
+    setBusy(button, true, t('Speichern …'));
+    try {
+      state.settings = await api('/api/settings', { method: 'POST', body: { output_dir: path } });
+      applyLibraryPath(state.settings);
+      await poll();
+      toast(t('Bibliothekspfad gespeichert. Dateien wurden nicht verschoben.'), 'ok');
+    } catch (error) {
+      toast(error.message, 'bad');
+    } finally {
+      setBusy(button, false);
+    }
   }
 
   /* ------------------------------------------------------------------ */
@@ -717,6 +741,7 @@
   async function createFolder() {
     const name = $('new-folder-name').value.trim();
     if (!name) { toast(t('Bitte einen Ordnernamen eingeben.'), 'bad'); return; }
+    if (!window.confirm(t('Neuen Unterordner anlegen: {path}?', { path: `${state.folderPath}/${name}` }))) return;
     const button = $('create-folder');
     setBusy(button, true, t('Anlegen …'));
     try {
@@ -801,6 +826,20 @@
       toast(error.message, 'bad');
     } finally {
       setBusy(button, false);
+    }
+  }
+
+  async function readSessionFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      if (file.size > 1900000) throw new Error(t('Importdatei ist zu groß (max. 1,9 MB).'));
+      $('session-text').value = await file.text();
+      toast(t('Datei geladen. Erst Importieren überträgt die Sitzung zum NAS.'));
+    } catch (error) {
+      toast(error.message, 'bad');
+    } finally {
+      event.target.value = '';
     }
   }
 
@@ -900,7 +939,7 @@
       await startJob('preview', {
         path: relative,
         kind,
-        output_dir: outputDirValue(),
+        output_dir: (state.lastJob && state.lastJob.request && state.lastJob.request.output_dir) || outputDirValue(),
       }, t('Vorschau wird erzeugt …'));
     } catch (error) {
       toast(error.message, 'bad');
@@ -918,17 +957,12 @@
       window.location.replace('/login');
     });
 
-    $('browse-folder').addEventListener('click', () => openFolderPicker(outputDirValue()));
-    $('use-default-folder').addEventListener('click', async () => {
-      try {
-        const settings = await api('/api/settings');
-        const fallback = (settings.share && settings.share.default_output) || settings.output_dir;
-        if (fallback) $('output-dir').value = fallback;
-        else toast(t('Keine Freigabe gefunden.'), 'bad');
-      } catch (error) {
-        toast(error.message, 'bad');
-      }
+    $('browse-folder').addEventListener('click', () => showTab('settings'));
+    $('setup-storage').addEventListener('click', () => showTab('settings'));
+    $('browse-library').addEventListener('click', () => {
+      openFolderPicker($('library-dir').value.trim()).catch((error) => toast(error.message, 'bad'));
     });
+    $('save-library').addEventListener('click', saveLibraryPath);
 
     $('load-subscriptions').addEventListener('click', async () => {
       const button = $('load-subscriptions');
@@ -968,6 +1002,7 @@
     $('save-defaults').addEventListener('click', saveDefaults);
 
     $('import-session').addEventListener('click', importSession);
+    $('session-file').addEventListener('change', readSessionFile);
     $('test-session').addEventListener('click', testSession);
     $('clear-session').addEventListener('click', clearSession);
     $('save-proxy').addEventListener('click', () => saveProxy(false));
@@ -1001,7 +1036,7 @@
 
     $('folder-close').addEventListener('click', closeFolderPicker);
     $('folder-select').addEventListener('click', () => {
-      $('output-dir').value = state.folderPath;
+      $('library-dir').value = state.folderPath;
       closeFolderPicker();
     });
     $('folder-up').addEventListener('click', () => {
@@ -1057,6 +1092,7 @@
       const session = await api('/api/session');
       state.csrf = session.csrf;
       await loadSettings();
+      if (!outputDirValue()) showTab('settings');
       await poll();
       window.setInterval(() => { if (!document.hidden) poll(); }, 3000);
     } catch (error) {

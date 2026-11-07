@@ -48,12 +48,6 @@ def main(argv: list[str] | None = None) -> int:
             control_db.set_setting(db, 'share_root', str(Path(args.share_root).resolve()))
         if args.output_dir:
             control_db.set_setting(db, 'output_dir', str(Path(args.output_dir).resolve()))
-        elif not control_db.get_setting(db, 'output_dir', ''):
-            share_root = args.share_root or control_db.get_setting(db, 'share_root', '')
-            if share_root and Path(share_root).is_dir():
-                default = Path(share_root) / 'OnlyFans'
-                default.mkdir(parents=True, exist_ok=True)
-                control_db.set_setting(db, 'output_dir', str(default))
         control_db.set_setting(db, 'bootstrap_version', '1')
 
     if password:

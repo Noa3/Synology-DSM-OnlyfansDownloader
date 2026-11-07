@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import http.cookiejar
+import http.client
 import json
 import os
 import subprocess
@@ -16,7 +17,9 @@ from pathlib import Path
 from PIL import Image
 
 from ofdl.dsm.config import resolve_paths
-from ofdl.dsm.service import create_server
+from ofdl.dsm.service import Scheduler, create_server
+from ofdl.dsm import db
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -249,6 +252,7 @@ class ServiceTests(unittest.TestCase):
 
     def test_preview_job(self):
         self.h.setup()
+        self.h.call('POST', '/api/settings', {'output_dir': str(self.h.output)})
         previous = os.environ.pop('OFDL_WORKER_COMMAND', None)
         try:
             image = self.h.output / 'photo.jpg'
@@ -282,6 +286,91 @@ class ServiceTests(unittest.TestCase):
         self.assertEqual(status, 404)
         status, _ = self.h.call('GET', '/static/nope.js')
         self.assertEqual(status, 404)
+
+    def test_startup_and_status_do_not_select_or_create_library(self):
+        self.h.setup()
+        before = set(self.h.share.iterdir())
+        for endpoint in ('/api/settings', '/api/status', '/api/library'):
+            status, data = self.h.call('GET', endpoint)
+            self.assertEqual(status, 200)
+            self.assertEqual(data['output_dir'], '')
+        self.assertEqual(set(self.h.share.iterdir()), before)
+        self.assertIsNone(self.h.app.ensure_output_dir())
+
+    def test_library_path_is_shared_and_cache_changes_immediately(self):
+        self.h.setup()
+        self.h.import_fake_session()
+        self.h.call('GET', '/api/library')  # Populate cache with no library.
+        status, _ = self.h.call('POST', '/api/settings', {'output_dir': str(self.h.output)})
+        self.assertEqual(status, 200)
+        status, data = self.h.call('GET', '/api/status')
+        self.assertEqual(data['output_dir'], str(self.h.output))
+        self.assertEqual(data['library']['output_dir'], str(self.h.output))
+        missing = self.h.share / 'missing'
+        status, _ = self.h.call('POST', '/api/settings', {'output_dir': str(missing)})
+        self.assertEqual(status, 400)
+        self.assertFalse(missing.exists())
+        status, _ = self.h.call('POST', '/api/jobs', {
+            'kind': 'download', 'options': {'output_dir': str(self.h.share), 'profiles': ['alice']}})
+        self.assertEqual(status, 409)
+        status, data = self.h.call('POST', '/api/jobs', {
+            'kind': 'download', 'options': {'profiles': ['alice']}})
+        self.assertEqual(status, 202)
+        self.assertEqual(data['job']['request']['output_dir'], str(self.h.output))
+        status, _ = self.h.call('POST', '/api/settings', {'output_dir': str(self.h.share)})
+        self.assertEqual(status, 409)
+
+    def test_scheduler_uses_current_library_not_old_snapshot(self):
+        self.h.setup()
+        self.h.import_fake_session()
+        self.h.call('POST', '/api/settings', {
+            'output_dir': str(self.h.output),
+            'schedule': {'enabled': True, 'time': '00:00',
+                         'options': {'output_dir': str(self.h.share), 'profiles': ['alice']}},
+        })
+        with patch.object(self.h.app.job_manager, 'start') as start:
+            Scheduler(self.h.app).tick()
+        self.assertEqual(start.call_args.args[1]['output_dir'], str(self.h.output))
+
+    def test_bootstrap_never_creates_download_folders(self):
+        from ofdl.dsm.bootstrap import main
+        fresh = self.h.root / 'bootstrap-share'
+        fresh.mkdir()
+        main(['--share-root', str(fresh), '--data-dir', str(self.h.root / 'bootstrap-data')])
+        self.assertEqual(list(fresh.iterdir()), [])
+
+    def test_legacy_destination_needs_explicit_confirmation(self):
+        self.h.setup()
+        with db.connect(self.h.paths.db) as conn:
+            db.set_setting(conn, 'output_dir', str(self.h.output))
+        self.assertIsNone(self.h.app.output_dir())
+        status, data = self.h.call('GET', '/api/settings')
+        self.assertEqual(data['output_dir'], '')
+        self.h.import_fake_session()
+        status, _ = self.h.call('POST', '/api/jobs', {
+            'kind': 'download', 'options': {'profiles': ['alice']}})
+        self.assertEqual(status, 409)
+        status, _ = self.h.call('POST', '/api/settings', {'output_dir': str(self.h.output)})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.h.app.output_dir(), self.h.output.resolve())
+
+    def test_logout_body_cannot_corrupt_next_http_request(self):
+        self.h.setup()
+        connection = http.client.HTTPConnection('127.0.0.1', self.h.port, timeout=5)
+        cookie = '; '.join(f'{item.name}={item.value}' for item in self.h.jar)
+        try:
+            connection.request('POST', '/api/logout', body='{}', headers={
+                'Cookie': cookie, 'X-CSRF-Token': self.h.csrf, 'Content-Type': 'application/json'})
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.getheader('Connection'), 'close')
+            response.read()
+            connection.request('GET', '/login')
+            response = connection.getresponse()
+            self.assertEqual(response.status, 200)
+            response.read()
+        finally:
+            connection.close()
 
     def test_login_rate_limit(self):
         self.h.setup('test-password-123')

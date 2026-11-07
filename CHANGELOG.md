@@ -1,5 +1,23 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-4 — explicit storage consent and shared library path
+
+- Remove automatic creation/permission grants for the OnlyFans and OnlyFansDL
+  shared folders. No implicit destination in bootstrap, startup or jobs.
+- Require explicit library selection in Settings, including after upgrades.
+  Existing shares/files remain untouched; old permissions are not revoked.
+- Use one saved path for downloads, manifest statistics and schedules. Reject
+  stale job paths and block destination changes during a job. Invalidate cached
+  statistics immediately; report manifest read errors instead of hiding them.
+- Require an existing destination; new subfolders need an explicit create action
+  and confirmation. Folder browsing performs no temporary write probes.
+- Add French and Spanish UI translations, remembered language choice and
+  reliable switching back to German after dynamic updates.
+- Add guided session import and local HAR/JSON/cURL file loading. File selection
+  alone does not upload credentials. No embedded credential interception.
+- Fix unread logout request bodies corrupting a subsequent HTTP request.
+- DSM desktop window integration remains planned, not enabled in this release.
+
 ## DSM 2.8.0-3 — 2026-11-07 — supported privilege pattern
 
 - Replace the custom `ctrl-script` block and package-specific group with the

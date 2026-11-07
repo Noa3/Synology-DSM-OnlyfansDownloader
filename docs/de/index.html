@@ -64,7 +64,7 @@
             <li><b>SynoCommunity-Quelle hinzufügen.</b><br>Package Center → Einstellungen → Paketquellen → <code>https://packages.synocommunity.com/</code></li>
             <li><b>SPK installieren.</b><br>Package Center → Manuell installieren. Python 3.13 wird als Abhängigkeit installiert.</li>
             <li><b>Web-Passwort festlegen.</b><br>Der Installationsdialog fragt nach einem Passwort. Danach über das DSM-Menü oder <code>http://&lt;NAS-IP&gt;:8765/</code> öffnen.</li>
-            <li><b>Ordner wählen und Sitzung importieren.</b><br>Die Freigaben <code>OnlyFansDL</code> und <code>OnlyFans</code> werden für das Dienstkonto vorbereitet.</li>
+            <li><b>Ordner wählen und Sitzung importieren.</b><br>In DSM dem Systeminternen Benutzer <code>sc-onlyfansdl</code> Lesen/Schreiben nur für die gewünschte Freigabe erlauben. Unter Einstellungen einen vorhandenen Bibliothekspfad speichern. Keine Freigaben werden automatisch angelegt.</li>
           </ol>
         </div>
         <div>
@@ -84,10 +84,10 @@
       <div class="wrap">
         <h2>Speicher und Kompatibilität</h2>
         <div class="grid">
-          <div class="card"><h3>Bibliothek</h3><p><code>OnlyFansDL/OnlyFans</code> oder eine bestehende Freigabe <code>OnlyFans</code> wählen. Dateien und SQLite-Manifest bleiben an ihrem Platz.</p></div>
-          <div class="card"><h3>Speicher</h3><p>Der Steuerdienst bleibt klein. Der Worker beendet sich nach jedem Auftrag. Das PSS-Ziel von 50 MiB im Leerlauf wird auf der DS723+ gemessen.</p></div>
+          <div class="card"><h3>Bibliothek</h3><p>Ein ausdrücklich gespeicherter Pfad unter Einstellungen für Downloads, Bibliothek und Zeitplan. Dateien bleiben erhalten. Nach dem Upgrade Pfad bestätigen; alte Freigaben werden nicht gelöscht.</p></div>
+          <div class="card"><h3>Speicher</h3><p>Der Steuerdienst bleibt klein. Der Worker beendet sich nach jedem Auftrag. Das PSS-Ziel von 50 MiB im Leerlauf ist auf der DS723+ noch nicht bestätigt.</p></div>
           <div class="card"><h3>Zeitplan</h3><p>Eine tägliche Uhrzeit kann die gespeicherten Download-Einstellungen starten. Es läuft nie mehr als ein Auftrag gleichzeitig.</p></div>
-          <div class="card"><h3>Sprache</h3><p>Die Weboberfläche wechselt zwischen Deutsch und Englisch. Technische Servermeldungen können deutsch bleiben.</p></div>
+          <div class="card"><h3>Sprache und Login</h3><p>Deutsch, Englisch, Französisch und Spanisch. Geführter cURL- oder HAR/JSON-Dateiimport. Technische Meldungen können deutsch/englisch bleiben. DSM-Desktopfenster sind geplant, noch nicht enthalten.</p></div>
         </div>
       </div>
     </section>

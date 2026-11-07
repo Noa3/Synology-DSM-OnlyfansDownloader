@@ -63,18 +63,6 @@ if ! "$VENV/bin/python" -c 'import requests, curl_cffi, PIL, m3u8, socks' >/dev/
     exit 1
 fi
 
-# Resolve the data share. Package Center creates the symlink for data-share;
-# the /volume*/ fallback covers first-start ordering differences.
-SHARE="$PKGROOT/shares/OnlyFansDL"
-if [ ! -d "$SHARE" ]; then
-    for candidate in /volume*/OnlyFansDL; do
-        if [ -d "$candidate" ]; then
-            SHARE="$candidate"
-            break
-        fi
-    done
-fi
-
 if [ -n "${wizard_app_password:-}" ]; then
     if [ "${wizard_app_password}" != "${wizard_app_password_confirm:-}" ]; then
         echo "ERROR: The two web-interface passwords do not match."
@@ -82,16 +70,16 @@ if [ -n "${wizard_app_password:-}" ]; then
     fi
     # The password is sent on stdin; it never appears in the process list.
     if ! printf '%s' "$wizard_app_password" | \
-        PYTHONPATH="$PKGDEST" OFDL_DATA_DIR="$DATA" OFDL_SHARE_ROOT="$SHARE" \
+        PYTHONPATH="$PKGDEST" OFDL_DATA_DIR="$DATA" \
         "$VENV/bin/python" -m ofdl.dsm.bootstrap --password-stdin --if-missing \
-        --share-root "$SHARE" >/dev/null 2>&1; then
+        >/dev/null 2>&1; then
         echo "ERROR: The web-interface password could not be stored."
         echo "Use the setup page in the web interface or reinstall the package."
         exit 1
     fi
 else
-    PYTHONPATH="$PKGDEST" OFDL_DATA_DIR="$DATA" OFDL_SHARE_ROOT="$SHARE" \
-        "$VENV/bin/python" -m ofdl.dsm.bootstrap --share-root "$SHARE" \
+    PYTHONPATH="$PKGDEST" OFDL_DATA_DIR="$DATA" \
+        "$VENV/bin/python" -m ofdl.dsm.bootstrap \
         >/dev/null 2>&1 || true
 fi
 

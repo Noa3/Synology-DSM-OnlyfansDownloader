@@ -15,7 +15,7 @@ pip-Befehle** erforderlich.
 
 ## 2. Paket installieren
 
-1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-3.spk` aus dem Release herunterladen.
+1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-4.spk` aus dem Release herunterladen.
 2. Package Center → **Manuell installieren** → Datei auswählen.
 3. DSM zeigt die Abhängigkeit **Python 3.13** an und installiert sie
    automatisch aus der SynoCommunity-Quelle.
@@ -46,19 +46,29 @@ Anmelden mit dem im Wizard gesetzten Passwort.
 
 ## 4. Downloadordner auswählen
 
-1. Reiter **Downloads** → **Durchsuchen**.
-2. Standardmäßig werden die Freigaben **OnlyFansDL** und **OnlyFans** für das
-   Dienstkonto vorbereitet. Der Unterordner `OnlyFansDL/OnlyFans` ist
-   voreingestellt. Eine bereits vorhandene Freigabe `OnlyFans` kann direkt als
-   bestehende Bibliothek ausgewählt werden.
-3. Für eine andere bestehende Bibliothek zum gewünschten Ordner navigieren.
-   Das Dienstkonto ist unprivilegiert und benötigt dort Les-/Schreibrecht;
-   andernfalls zeigt der Dialog einen Berechtigungsfehler. Alternativ die
-   Bibliothek in `OnlyFansDL` oder `OnlyFans` verschieben/kopieren.
-4. Ein bestehender Ordner wird nicht umbenannt oder geleert; `.ofdl.sqlite3`,
+1. Das Paket erstellt **keine** Freigaben. In DSM **Systemsteuerung → Gemeinsamer
+   Ordner → gewünschte Freigabe → Bearbeiten → Berechtigungen** öffnen.
+2. Auf **Systeminterner Benutzer** wechseln und `sc-onlyfansdl` für genau diese
+   Freigabe **Lesen/Schreiben** erlauben. Keine Administratorgruppe verwenden.
+3. In der App **Einstellungen → Bibliothekspfad → Durchsuchen**, einen bestehenden
+   Ordner wählen und **Pfad speichern**. Auch nach dem Upgrade muss der Pfad
+   einmal ausdrücklich bestätigt werden. Vorher laufen keine Downloads/Zeitpläne.
+4. Derselbe gespeicherte Pfad gilt für **Downloads**, **Bibliothek** und Zeitplan.
+   Ein alter Zielpfad in Zeitplaneinstellungen wird nicht weiterverwendet.
+   Ein bestehender Ordner wird nicht umbenannt oder geleert; `.ofdl.sqlite3`,
    `.part`-Dateien und die vorhandene Struktur bleiben unverändert.
 
-Neue Unterordner können direkt im Dialog mit **Anlegen** erstellt werden.
+Neue Unterordner können im Dialog mit **Anlegen** und ausdrücklicher Bestätigung
+erstellt werden. Nur ein existierender Ordner kann als Bibliothek gespeichert
+werden. Während eines Auftrags ist ein Wechsel gesperrt.
+
+### Unerwünschte Freigaben aus älteren Versionen entfernen
+
+Das Update löscht weder `/volume1/OnlyFans` noch `/volume1/OnlyFansDL`.
+Falls unerwünscht: Inhalt prüfen/sichern, altes Paket stoppen, aktualisieren und
+unter **DSM → Systemsteuerung → Gemeinsamer Ordner** die jeweiligen Freigaben
+selbst löschen. **Löschen entfernt auch enthaltene Dateien.** Alte nicht mehr
+benötigte Berechtigungen für `sc-onlyfansdl` ebenfalls in DSM entfernen.
 
 ## 5. OnlyFans-Sitzung importieren
 
@@ -66,7 +76,8 @@ Neue Unterordner können direkt im Dialog mit **Anlegen** erstellt werden.
    `https://onlyfans.com/api2/v2/...` kopieren:
    - Chrome/Edge: Entwicklerwerkzeuge → Netzwerk → Anfrage → **Copy as cURL (bash)**
    - oder HAR/JSON/Header aus einem API-Request.
-2. In der OnlyFans-DL-Oberfläche → **Sitzung** den Text einfügen.
+2. In der OnlyFans-DL-Oberfläche → **Sitzung** den Text einfügen oder eine eigene
+   HAR/JSON/cURL-Datei auswählen. Dateiauswahl allein überträgt nichts zum NAS.
 3. **Importieren** klicken. Die Oberfläche zeigt die Konto-ID.
 4. **Sitzung testen** klicken. Erst nach erfolgreichem Test zeigt der Status
    **Verbunden**. Der Test ist ein eigener Worker-Auftrag und beendet sich
@@ -78,6 +89,11 @@ Die Sitzung wird unter
 `/var/packages/OnlyFansDL/var/data/session.json` mit Dateirechten `0600`
 gespeichert. Sie erscheint nicht in Einstellungen, Auftragsdaten oder
 Protokollen.
+
+Passwort und Zwei-Faktor-Code nur auf OnlyFans eingeben, nicht in dieser App.
+Exporte enthalten Zugangsdaten: nicht teilen und nach dem Import löschen.
+Ein eingebettetes Login kann wegen Browser-Isolation nicht automatisch
+übernommen werden. Siehe [DSM-Integration](DSM_INTEGRATION.md).
 
 ## 6. Creator und Download
 
@@ -150,8 +166,8 @@ wieder, wenn derselbe Ordner ausgewählt wird.
 | Anmeldung funktioniert nicht | Passwort aus dem Installations-Wizard verwenden. Bei vergessenem Passwort Paket deinstallieren und neu installieren (Downloads bleiben erhalten) oder die Steuerdaten zurücksetzen. |
 | „Keine Sitzung eingerichtet“ | Unter **Sitzung** importieren und testen. |
 | Sitzungstest schlägt fehl | Anfrage von `onlyfans.com/api2/v2/` kopieren, nicht von einer anderen Seite. Session kann an Netz/IP gebunden sein; im gleichen Netz wie der Browser testen. Cloudflare-Anfragen werden nicht umgangen. |
-| „Paket benötigt root-Rechte“ / Administratorwarnung | Es wird eine alte Version (2.8.0-1/2.8.0-2) installiert. Version **2.8.0-3** verwenden; sie nutzt das unterstützte SynoCommunity-Privileg-Muster ohne root-/Administratorgruppen-Rechte. |
-| Downloadordner nicht beschreibbar | Einen Ordner unter `OnlyFansDL` oder `OnlyFans` wählen. Andere Freigaben benötigen eine Freigabeberechtigung für `sc-onlyfansdl`; das Paket fordert bewusst keine Administratorgruppe an. |
+| „Paket benötigt root-Rechte“ / Administratorwarnung | Alte Versionen 2.8.0-1/2.8.0-2 ersetzen. 2.8.0-4 nutzt das SynoCommunity-Privileg-Muster ohne root-/Administratorgruppen-Rechte. Bei weiterer Warnung exakte DSM-Version und Meldung melden. |
+| Downloadordner nicht beschreibbar | In DSM dem Systeminternen Benutzer `sc-onlyfansdl` Lesen/Schreiben nur für die gewünschte Freigabe erlauben; dann den vorhandenen Pfad unter Einstellungen speichern. |
 | Kein DSM-Menüeintrag | Paket neu starten; `reloadui` wird beim Installieren gesetzt. Alternativ `http://<NAS-IP>:8765/` direkt öffnen. |
 | Viele Dateien, langsamer erster Lauf | Erwartet bei Altlayouts; Folgeläufe nutzen das Manifest. Keine Medien werden dauerhaft im Steuerdienst gehalten. |
 

@@ -12,9 +12,6 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import DEFAULT_SHARE_NAME
-
-SHARE_NAMES = (DEFAULT_SHARE_NAME, 'OnlyFans')
 
 
 @dataclass(frozen=True)
@@ -91,15 +88,6 @@ def _candidate_share_roots(paths: Paths) -> list[Path]:
     candidates: list[Path] = []
     if paths.share is not None:
         candidates.append(paths.share)
-    for share_name in SHARE_NAMES:
-        # Package Center creates these symlinks for the data-share resource.
-        candidates.append(paths.pkgdest.parent / 'shares' / share_name)
-        candidates.append(paths.pkgvar / 'shares' / share_name)
-        # Fallback for DSM releases that do not create the link.
-        for base in ('/volume1', '/volume2', '/volume3', '/volume4', '/volume5',
-                     '/volume6', '/volume7', '/volume8'):
-            candidates.append(Path(base) / share_name)
-    candidates.append(paths.pkgvar / 'share')
     return candidates
 
 
@@ -125,9 +113,8 @@ def allowed_roots(paths: Paths) -> list[Path]:
     """Directories the folder picker may expose.
 
     The package runs as the unprivileged account ``sc-onlyfansdl``.  The
-    data-share resources grant it rw access to ``OnlyFansDL`` and the migration
-    share ``OnlyFans``.  Other volumes are listed only if the account can read
-    them; a permission error is surfaced by the folder dialog.
+    user grants access to an existing share in DSM. No share is created or
+    granted automatically; a permission error is surfaced by the folder dialog.
     """
     roots: list[Path] = []
     for share in resolve_share_roots(paths):
@@ -183,13 +170,8 @@ def directory_is_writable(path: Path) -> bool:
 
 
 def default_output_dir(paths: Paths) -> Path | None:
-    share = resolve_share_root(paths)
-    if share is None:
-        return None
-    # OnlyFansDL is the package-owned share; use a subfolder so the share root
-    # stays tidy.  An existing "OnlyFans" share is the migration layout and is
-    # used directly, preserving the old library and manifest.
-    return (share / 'OnlyFans') if share.name == DEFAULT_SHARE_NAME else share
+    """No implicit destination: selecting a library requires user consent."""
+    return None
 
 
 def human_bytes(value: int | float | None) -> str:

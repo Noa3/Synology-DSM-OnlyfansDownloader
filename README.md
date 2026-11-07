@@ -49,7 +49,7 @@ nicht über SSH.
    - Name: `SynoCommunity`
    - Ort: `https://packages.synocommunity.com/`
    - Die Quelle muss vertrauenswürdig sein; DSM zeigt ggf. einen Hinweis.
-2. **`OnlyFansDL-r1000-dsm72_2.8.0-3.spk` herunterladen** (Release-Seite dieses
+2. **`OnlyFansDL-r1000-dsm72_2.8.0-4.spk` herunterladen** (Release-Seite dieses
    Repositories) und in Package Center → Manuell installieren auswählen.
 3. Package Center installiert **Python 3.13 automatisch** als Abhängigkeit.
    Falls die Laufzeit fehlt, zuerst `Python 3.13` aus SynoCommunity installieren.
@@ -57,12 +57,13 @@ nicht über SSH.
    Es wird nur auf dem NAS gespeichert.
 5. Nach der Installation **OnlyFans DL** im DSM-Hauptmenü öffnen oder
    `http://<NAS-IP>:8765/` aufrufen und mit dem Passwort anmelden.
-6. Unter **Downloads** den Zielordner wählen. Standard ist
-   `OnlyFansDL/OnlyFans` in der automatisch angelegten Freigabe `OnlyFansDL`.
-   Eine vorhandene Freigabe `OnlyFans` wird ebenfalls für das Dienstkonto
-   vorbereitet und kann als bestehende Bibliothek ausgewählt werden. Andere
-   Ordner können über **Durchsuchen** gewählt werden, sofern das Dienstkonto
-   Les-/Schreibrecht besitzt.
+6. In DSM **Systemsteuerung → Gemeinsamer Ordner → gewünschte Freigabe →
+   Bearbeiten → Berechtigungen → Systeminterner Benutzer** dem Konto
+   `sc-onlyfansdl` **Lesen/Schreiben** erlauben. Dann in der App unter
+   **Einstellungen → Bibliothekspfad** einen vorhandenen Ordner auswählen und
+   **Pfad speichern**. Downloads, Bibliothek und Zeitplan verwenden diesen Pfad.
+   **Keine Freigaben werden automatisch angelegt oder berechtigt.** Auch nach
+   dem Upgrade von 2.8.0-3 muss der gewünschte Pfad einmal bestätigt werden.
 7. Unter **Sitzung** eine eingeloggte OnlyFans-API-Anfrage einfügen
    (cURL, HAR, JSON oder Roh-Header), **Importieren** und **Sitzung testen**.
 8. Creator auswählen (manuell oder „Alle aktiven Abonnements“), Filter setzen und
@@ -77,8 +78,10 @@ SSH ist nur für die optionale Speicher-/Diagnosemessung nötig (siehe
 
 ## Sprachen
 
-- **Weboberfläche:** Deutsch/Englisch über den Umschalter oben rechts. Die Wahl
-  wird im Browser gespeichert.
+- **Weboberfläche:** Deutsch, Englisch, Französisch und Spanisch über den
+  Umschalter oben rechts, auch bei Login/Setup. Die Wahl wird im Browser
+  gespeichert. Nicht übersetzte technische Servermeldungen bleiben Deutsch
+  bzw. fallen auf Englisch zurück.
 - **GitHub Pages:** [Englisch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/)
   und [Deutsch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/de/).
 - **Dokumentation:** Diese README ist deutsch; die Installations- und
@@ -96,7 +99,7 @@ SSH ist nur für die optionale Speicher-/Diagnosemessung nötig (siehe
 | Vorschaubilder | `/var/packages/OnlyFansDL/var/data/previews/` |
 
 Beim Deinstallieren werden die privaten Steuerdaten und die venv entfernt.
-**Die Freigabe `OnlyFansDL` und alle Downloads bleiben erhalten.** Ein Update
+**Gewählte Bibliotheken und alle Downloads bleiben erhalten.** Ein Update
 behält Einstellungen, Sitzung und die venv bei und installiert nur geänderte
 Wheels nach.
 
@@ -131,8 +134,8 @@ python tools/fetch_wheels.py
 python tools/build_spk.py
 
 # Ergebnis
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-3.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-3.spk.sha256
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-4.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-4.spk.sha256
 ```
 
 Der Build benötigt keinen Synology-Toolchain und kein Linux. Die Wheels werden aus
@@ -163,14 +166,28 @@ klare Trennung zwischen „lokal geprüft“ und „auf DSM-Hardware geprüft“
 - Die Sitzungsdatei ist `0600` und enthält nur die importierten Header/Cookies.
   Sie wird nicht in Einstellungen, Auftragsdaten oder Protokollen abgelegt.
 - Das Paket läuft als eigener DSM-Dienstbenutzer `sc-onlyfansdl` und fordert
-  **keine** root- oder Administratorgruppen-Rechte an. Die Freigaben
-  `OnlyFansDL` und `OnlyFans` werden vom DSM-`data-share`-Worker für dieses
-  Konto freigegeben. Für andere Zielordner muss das Dienstkonto Les-/Schreibrecht
-  besitzen; andernfalls meldet die Oberfläche einen Berechtigungsfehler.
+  **keine** root- oder Administratorgruppen-Rechte an. Der Benutzer gibt nur die
+  selbst gewählte Freigabe für dieses Konto frei; andernfalls meldet die
+  Oberfläche einen Berechtigungsfehler. Alte automatisch angelegte Freigaben
+  werden nicht gelöscht und ohne erneute Pfadbestätigung nicht verwendet.
 - Kein DRM-Bypass, keine Kaufautomatisierung, keine Umgehung von Cloudflare-
   oder sonstigen Sicherheitsabfragen.
 - Die Live-API-Kompatibilität wurde in dieser Build-Umgebung **nicht** mit einem
   echten Konto getestet. Ein Sitzungstest auf dem NAS ist erforderlich.
+
+## DSM-Fenster und vereinfachter Login
+
+Ein Fenster im DSM-Desktop ist grundsätzlich möglich, braucht aber eine
+HTTPS-/Same-Origin-Integration. Einfaches Einbetten von HTTP-Port 8765 würde
+bei HTTPS-DSM an Mixed Content und dem Klickschutz scheitern. **2.8.0-4 öffnet
+weiterhin die Browseroberfläche**; Sicherheitsheader werden nicht abgeschaltet.
+
+Die Sitzung lässt sich geführt per cURL-Text oder HAR/JSON-Dateiauswahl
+importieren. Dateiauswahl allein sendet nichts; erst **Importieren** überträgt
+die Sitzung. Ein OnlyFans-Fenster lässt sich nicht aus einer NAS-Webseite
+auslesen (Same-Origin/HttpOnly). Kein Passwort oder Zwei-Faktor-Code wird vom
+Downloader abgefragt. Optionen für spätere Browser-Helfer stehen in
+[`docs/DSM_INTEGRATION.md`](docs/DSM_INTEGRATION.md).
 
 ## Lizenz
 

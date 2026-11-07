@@ -1,8 +1,32 @@
-/* German/English UI translations. German strings are the source keys. */
+/* Local UI translations. German strings are the source keys. */
 (() => {
   'use strict';
 
   const EN = {
+    'Bibliotheksordner auswählen': 'Choose library folder',
+    'Bibliothekspfad': 'Library path',
+    'Pfad speichern': 'Save path',
+    'In Einstellungen ändern': 'Change in Settings',
+    'Bitte zuerst unter Einstellungen einen vorhandenen Ordner auswählen und speichern. Es werden keine Freigaben automatisch angelegt.': 'First choose and save an existing folder in Settings. No shared folders are created automatically.',
+    'In DSM: Systemsteuerung → Gemeinsamer Ordner → Bearbeiten → Berechtigungen → Systeminterner Benutzer → sc-onlyfansdl → Lesen/Schreiben. Keine Administratorrechte nötig.': 'In DSM: Control Panel → Shared Folder → Edit → Permissions → System internal user → sc-onlyfansdl → Read/Write. No administrator rights needed.',
+    'Ein gemeinsamer Pfad für Downloads, Bibliothek und Zeitplan. Speichern verschiebt und löscht keine Dateien. Neue Unterordner entstehen nur nach ausdrücklichem Anlegen oder beim gestarteten Download.': 'One shared path for downloads, library and schedule. Saving does not move or delete files. Subfolders are created only on explicit request or during a download you start.',
+    'Bereits von älteren Versionen angelegte Freigaben bleiben erhalten. Nur selbst in DSM entfernen, nachdem ihr Inhalt geprüft wurde.': 'Shared folders created by older versions are kept. Remove them yourself in DSM only after checking their contents.',
+    '. Downloads, Bibliothek und Zeitplan verwenden den gespeicherten Pfad unter Einstellungen. Ohne Manifest sind vorhandene Dateien nicht automatisch gezählt.': '. Downloads, library and schedule use the path saved in Settings. Without a manifest, existing files are not counted automatically.',
+    'Das Manifest konnte nicht gelesen werden. Pfad und Berechtigungen prüfen.': 'Could not read the manifest. Check path and permissions.',
+    'Bibliothekspfad gespeichert. Dateien wurden nicht verschoben.': 'Library path saved. Files were not moved.',
+    'Neuen Unterordner anlegen: {path}?': 'Create new subfolder: {path}?',
+    'Bitte zuerst den Bibliothekspfad in den Einstellungen speichern.': 'First save the library path in Settings.',
+    'Der Auftrag muss den gespeicherten Bibliothekspfad verwenden.': 'The job must use the saved library path.',
+    'Der Bibliothekspfad kann während eines Auftrags nicht geändert werden.': 'The library path cannot be changed during a job.',
+    'Der Downloadordner existiert nicht. Bitte einen vorhandenen Ordner wählen oder ausdrücklich anlegen.': 'The download folder does not exist. Choose an existing folder or explicitly create one.',
+    'OnlyFans im Browser öffnen': 'Open OnlyFans in browser',
+    'Im eigenen Browser anmelden, einschließlich Zwei-Faktor-Anmeldung.': 'Sign in using your own browser, including two-factor authentication.',
+    'Entwicklertools (F12) → Netzwerk → eine Anfrage an /api2/v2/ auswählen → Kopieren → Als cURL (bash) kopieren.': 'Developer tools (F12) → Network → select a request to /api2/v2/ → Copy → Copy as cURL (bash).',
+    'Unten einfügen und importieren. Danach Sitzung testen.': 'Paste below and import. Then test the session.',
+    'Ein eingebettetes Login kann die Sitzung nicht automatisch übernehmen. Passwort und Zwei-Faktor-Code bleiben bei OnlyFans. cURL/HAR enthalten Zugangsdaten: nicht teilen und Exportdateien anschließend löschen.': 'An embedded login cannot capture the session automatically. Password and two-factor code stay with OnlyFans. cURL/HAR contain credentials: do not share them and delete exported files afterwards.',
+    'Datei auswählen (HAR/JSON/cURL, max. 2 MB)': 'Choose file (HAR/JSON/cURL, max. 2 MB)',
+    'Importdatei ist zu groß (max. 1,9 MB).': 'Import file is too large (max. 1.9 MB).',
+    'Datei geladen. Erst Importieren überträgt die Sitzung zum NAS.': 'File loaded. Only Import sends the session to the NAS.',
     // Page titles
     'OnlyFans DL · Anmeldung': 'OnlyFans DL · Sign in',
     'OnlyFans DL · Ersteinrichtung': 'OnlyFans DL · First-time setup',
@@ -305,13 +329,28 @@
     'Sprache / Language': 'Language'
   };
 
-  let lang = localStorage.getItem('ofdl_lang') || (String(navigator.language || 'de').toLowerCase().startsWith('de') ? 'de' : 'en');
+  const languages = { de: 'Deutsch', en: 'English', fr: 'Français', es: 'Español' };
+  let stored = '';
+  try { stored = localStorage.getItem('ofdl_lang') || ''; } catch (_) { /* Private browsing. */ }
+  const preferred = String(navigator.language || 'en').toLowerCase().split('-')[0];
+  let lang = Object.hasOwn(languages, stored) ? stored : (Object.hasOwn(languages, preferred) ? preferred : 'en');
   let originalTitle = document.title;
   const textOriginals = new WeakMap();
   const attrOriginals = new WeakMap();
+  const reverse = new Map();
+  for (const [source, value] of Object.entries({ ...EN, ...PLACEHOLDER_EN, ...ARIA_EN })) {
+    reverse.set(value, source);
+    for (const catalog of Object.values(window.ofdlLanguages || {})) {
+      if (catalog[value]) reverse.set(catalog[value], source);
+    }
+  }
+
+  function sourceKey(text) { return Object.hasOwn(EN, text) ? text : (reverse.get(text) || text); }
 
   function translate(text, vars) {
-    let value = lang === 'de' ? text : (EN[text] || PLACEHOLDER_EN[text] || text);
+    const source = sourceKey(text);
+    const english = EN[source] || PLACEHOLDER_EN[source] || ARIA_EN[source] || source;
+    let value = lang === 'de' ? source : ((window.ofdlLanguages?.[lang] || {})[english] || english);
     if (vars) {
       for (const [key, replacement] of Object.entries(vars)) {
         value = value.replaceAll(`{${key}}`, String(replacement));
@@ -331,8 +370,9 @@
     });
     let node;
     while ((node = walker.nextNode())) {
-      if (!textOriginals.has(node)) textOriginals.set(node, node.nodeValue);
-      const source = textOriginals.get(node);
+      let record = textOriginals.get(node);
+      if (!record || record.last !== node.nodeValue) record = { source: node.nodeValue, last: '' };
+      const source = record.source;
       const key = source.trim();
       const translated = translate(key);
       if (translated !== key) {
@@ -342,6 +382,8 @@
       } else {
         node.nodeValue = source;
       }
+      record.last = node.nodeValue;
+      textOriginals.set(node, record);
     }
   }
 
@@ -352,13 +394,13 @@
       if (!values) { values = {}; attrOriginals.set(element, values); }
       if (!(attribute in values)) values[attribute] = element.getAttribute(attribute) || '';
       const source = values[attribute];
-      if (source) element.setAttribute(attribute, (lang === 'de' ? source : (map[source] || source)));
+      if (source) element.setAttribute(attribute, translate(source));
     });
   }
 
   function applyDom() {
     document.documentElement.lang = lang;
-    document.title = (lang === 'de' ? originalTitle : (EN[originalTitle] || originalTitle));
+    document.title = translate(originalTitle);
     applyTextNodes(document.body);
     applyAttributes('[placeholder]', 'placeholder', PLACEHOLDER_EN);
     applyAttributes('[aria-label]', 'aria-label', ARIA_EN);
@@ -366,16 +408,22 @@
   }
 
   function setLanguage(next) {
-    const value = next === 'en' ? 'en' : 'de';
+    const value = Object.hasOwn(languages, next) ? next : 'en';
     if (value === lang) { applyDom(); return; }
     lang = value;
-    localStorage.setItem('ofdl_lang', lang);
+    try { localStorage.setItem('ofdl_lang', lang); } catch (_) { /* Private browsing. */ }
     applyDom();
     document.dispatchEvent(new CustomEvent('ofdl-language', { detail: lang }));
   }
 
   function init() {
     document.querySelectorAll('#language-select').forEach((select) => {
+      select.replaceChildren(...Object.entries(languages).map(([value, label]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        return option;
+      }));
       select.value = lang;
       select.addEventListener('change', () => setLanguage(select.value));
     });

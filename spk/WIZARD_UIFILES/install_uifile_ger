@@ -36,7 +36,7 @@
         ]
       },
       {
-        "desc": "Die Freigabe OnlyFansDL wird automatisch angelegt. Der Downloadordner ist standardmäßig OnlyFansDL/OnlyFans und kann später in der Oberfläche geändert werden. Bestehende Bibliotheken und .ofdl.sqlite3-Manifeste können dort ausgewählt werden."
+        "desc": "Es werden keine Freigaben automatisch angelegt. Nach der Installation in DSM dem Systeminternen Benutzer sc-onlyfansdl Les-/Schreibrechte auf die gewünschte Freigabe geben und unter Einstellungen den vorhandenen Bibliotheksordner auswählen. Vorhandene Dateien und Manifeste bleiben erhalten."
       }
     ]
   }

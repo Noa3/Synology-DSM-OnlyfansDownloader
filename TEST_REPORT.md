@@ -1,4 +1,4 @@
-# Testbericht — OnlyFans DL für Synology DSM 2.8.0-3
+# Testbericht — OnlyFans DL für Synology DSM 2.8.0-4
 
 Build-Datum: **2026-11-07**
 Zielplattform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 aus SynoCommunity**
@@ -15,13 +15,13 @@ Testumgebung: Windows 11, CPython 3.13.12, Chromium/Playwright
 
 | Prüfung | Ergebnis | Ort |
 | --- | --- | --- |
-| Vollständige Python-Testsuite | **339 Tests, 0 Fehler, 1 Skip** | lokal |
-| DSM-spezifische Tests | **45 Tests, 0 Fehler** | lokal |
+| Vollständige Python-Testsuite | **346 Tests, 0 Fehler, 1 Skip** | lokal |
+| DSM-spezifische Tests | **52 Tests, 0 Fehler** | lokal |
 | Paketbau | **bestanden** | lokal |
 | Reproduzierbarer Bau (zweimal) | **byte-identisch** | lokal |
 | Browser-UI (Playwright) | **bestanden**, keine Konsolenfehler | lokal |
-| Speichermessung Steuerdienst | **ca. 33 MiB RSS / 18,5 MiB private** | lokal (Windows) |
-| Streaming-Worker 256 MiB | **Peak ca. 37,3 MiB RSS / 28,2 MiB private** | lokal (Windows) |
+| Speichermessung Steuerdienst | **ca. 33 MiB RSS / 18,5 MiB private** | früherer lokaler Build, nicht neu gemessen |
+| Streaming-Worker 256 MiB | **Peak ca. 37,3 MiB RSS / 28,2 MiB private** | früherer lokaler Build, nicht neu gemessen |
 | Installation auf DS723+ | **AUSSTEHEND** | DSM |
 | Start/Stop auf DSM | **AUSSTEHEND** | DSM |
 | NAS-Neustart | **AUSSTEHEND** | DSM |
@@ -41,7 +41,7 @@ python -m unittest discover -s tests
 Auszug:
 
 ```
-Ran 339 tests in 103.824s
+Ran 346 tests in 91.761s
 OK (skipped=1)
 ```
 
@@ -63,15 +63,15 @@ Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
 ## Paketprüfung
 
 ```
-Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-3.spk
-Größe:  21,98 MiB
-SHA256: b2be28454309a4cb33f4cd43acb8f3456121ffeb6705bd33a8f9e72433afad71
-MD5(package.tgz): f85f70249a69aac26bf959cab2ada75a
+Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-4.spk
+Größe:  21,99 MiB
+SHA256: 650cc17ab1eeecc8eee3a659a30e299f93f185fa30fb10a6b219c45caacc277c
+MD5(package.tgz): f2ba495350377c13412729f67bc6cbed
 ```
 
 Geprüft:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-3`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-4`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
   `install_dep_packages=python313>=3.13.11-9`, MD5-Checksumme stimmt.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
@@ -86,8 +86,9 @@ Geprüft:
 - `conf/privilege`: `run-as: package`, `sc-onlyfansdl`, `groupname: synocommunity`,
   **kein** `join-groupname`, **kein** `ctrl-script`; entspricht dem Muster
   funktionierender SynoCommunity-Pakete.
-- `conf/resource`: Freigaben `OnlyFansDL` und `OnlyFans`, jeweils rw für
-  `sc-onlyfansdl`.
+- `conf/resource`: leer, keine `data-share`-Ressource. Keine automatische
+  Freigabeerstellung oder Berechtigungserteilung. Installer/Start exportieren
+  keinen automatisch ermittelten Freigabepfad.
 - Zwei Builds mit `SOURCE_DATE_EPOCH=1794009600` sind byte-identisch.
 
   Byte-Identität gilt für dieselbe Plattform/zlib-Version. Der CI-Linux-Build
@@ -96,16 +97,22 @@ Geprüft:
 
 ## Browser-UI
 
-Playwright (Chromium, headless, 1440×1100) hat den vollständigen Ablauf geprüft:
+`python tools/test_web_ui.py` mit Playwright (Chromium, headless, 1440×1100)
+prüft mit synthetischer Sitzung und lokalen Manifesten, ohne echtes Konto:
 
-- Login-Seite → Anmeldung → Übersicht
-- Downloads → Ordnerdialog → Session-Tab → Sitzungsimport
-- Einstellungen
-- Sprachumschaltung Deutsch/Englisch in Login, Setup und Hauptoberfläche
+- Setup/Login-Sprachumschaltung Deutsch/Englisch/Französisch/Spanisch
+- Erster Start ohne Bibliothek → Einstellungen, kein impliziter Zielordner
+- Gespeicherter Pfad für Downloads und Bibliothek; Manifestwechsel sofort sichtbar
+- Ordnererstellung: Bestätigung ablehnen erzeugt nichts, Bestätigung erlauben
+  erstellt nur den ausdrücklich gewählten Unterordner
+- Dateiauswahl sendet keine Sitzung; Import erst nach ausdrücklichem Klick
+- Sprachenwechsel durch alle Tabs, Pfad bleibt korrekt; Neuladen behält Pfad
+- Abmelden/Login ohne beschädigte HTTP-Folgeanfrage
 - keine `console.error`/`pageerror`-Meldungen
 - keine externen Ressourcen (CSP-konform)
 
-Screenshots: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`,
+Ältere illustrative Screenshots (2.8.0-2, nicht der aktuelle Speicher-Dialog):
+`docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`,
 `docs/dsm-ui-folders.png`, `docs/dsm-ui-session.png`,
 `docs/dsm-ui-session-tested.png`, `docs/dsm-ui-settings.png`.
 
@@ -113,7 +120,8 @@ Screenshots: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`,
 
 Die Messung erfolgte unter Windows. PSS ist dort nicht verfügbar; die
 DSM-Zielmarke bezieht sich auf PSS und muss mit `tools/measure_dsm.py` auf der
-DS723+ gemessen werden.
+DS723+ gemessen werden. Die folgenden Werte stammen aus der früheren Messung,
+nicht aus einem erneuten Speicherbenchmark von 2.8.0-4.
 
 | Zustand | Prozesse | RSS | Private |
 | --- | --- | ---: | ---: |
@@ -147,6 +155,9 @@ lädt die Datei nicht in den Speicher. Details: `docs/MEASUREMENT.md`.
 | 13 | PSS aktiv | großer Auftrag, `--interval 0.5` | AUSSTEHEND |
 | 14 | PSS nach Abbruch | 30 s warten, Worker beendet? | AUSSTEHEND |
 | 15 | Mehrfachläufe | Sequenz 3×, Rückkehr zum Ausgangswert | AUSSTEHEND |
+| 16 | Upgrade-Speicherzustimmung | Kein alter Pfad aktiv, bis in Einstellungen gespeichert | AUSSTEHEND |
+| 17 | Keine neuen Freigaben | Installation/Start legt weder OnlyFans noch OnlyFansDL an | AUSSTEHEND |
+| 18 | Benutzerrechte | Nur ausdrücklich gewählte Freigabe für sc-onlyfansdl erlaubt | AUSSTEHEND |
 
 ### Befehle für die DSM-Messung
 
@@ -176,6 +187,11 @@ des Dienstes und des aktiven Workers an.
   DSM-PSS-Werte.
 - Der Worker-Peak bei einem echten großen Download kann über dem 256-MiB-Test
   liegen (TLS, curl_cffi, Netzwerkpuffer). Auf DSM messen.
+- Kein DSM-Desktopfenster implementiert. Browseroberfläche bleibt aktiv;
+  Klickschutz/CSP werden nicht gelockert. Siehe `docs/DSM_INTEGRATION.md`.
+- Vorhandene unerwünschte NAS-Freigaben wurden hier nicht gelöscht: kein Zugriff
+  auf das NAS. Update löscht keine Benutzerdaten. In DSM nur nach Inhaltsprüfung
+  die ausdrücklich genannten Freigaben entfernen.
 
 ## Reproduktion
 
@@ -185,5 +201,6 @@ python tools/build_spk.py
 python -m unittest discover -s tests
 ```
 
-Erwartung: `Ran 339 tests`, `OK (skipped=1)` und ein byte-identisches SPK bei
-gleichem `SOURCE_DATE_EPOCH`.
+Erwartung: keine Testfehler und ein byte-identisches SPK bei gleichem
+`SOURCE_DATE_EPOCH`. Browser-Test separat: `python tools/test_web_ui.py`
+(optionale Entwicklerabhängigkeit Playwright mit installiertem Chromium).

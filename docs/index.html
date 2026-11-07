@@ -64,7 +64,7 @@
             <li><b>Add the SynoCommunity source.</b><br>Package Center → Settings → Package Sources → <code>https://packages.synocommunity.com/</code></li>
             <li><b>Install the SPK.</b><br>Package Center → Manual Install. Python 3.13 is installed as a dependency.</li>
             <li><b>Set the web password.</b><br>The install wizard asks for a password. Open the package from the DSM menu or <code>http://&lt;NAS-IP&gt;:8765/</code>.</li>
-            <li><b>Choose a folder and import a session.</b><br>The default shares <code>OnlyFansDL</code> and <code>OnlyFans</code> are prepared for the package account.</li>
+            <li><b>Choose a folder and import a session.</b><br>In DSM, grant <code>sc-onlyfansdl</code> Read/Write access only to your chosen share (Permissions → System internal user). Save an existing library path in Settings. No shared folders are created automatically.</li>
           </ol>
         </div>
         <div>
@@ -83,10 +83,10 @@
       <div class="wrap">
         <h2>Storage and compatibility</h2>
         <div class="grid">
-          <div class="card"><h3>Library</h3><p>Select <code>OnlyFansDL/OnlyFans</code> or an existing <code>OnlyFans</code> share. Files and the SQLite manifest stay in place.</p></div>
-          <div class="card"><h3>Memory</h3><p>The control service stays small. The worker exits after each job. A PSS target of 50 MiB idle is being measured on the DS723+.</p></div>
+          <div class="card"><h3>Library</h3><p>One explicitly saved path in Settings for downloads, library and schedule. Existing files stay in place. Upgrades require confirming the path; old shared folders are not deleted.</p></div>
+          <div class="card"><h3>Memory</h3><p>The control service stays small. The worker exits after each job. The 50 MiB idle PSS target has not yet been verified on the DS723+.</p></div>
           <div class="card"><h3>Schedule</h3><p>A daily time can start the saved download settings. Never more than one job runs at a time.</p></div>
-          <div class="card"><h3>Language</h3><p>The web interface switches between German and English. Backend messages may remain technical.</p></div>
+          <div class="card"><h3>Language and login</h3><p>German, English, French and Spanish UI. Guided cURL or HAR/JSON file import. Technical messages may fall back to English/German. DSM desktop embedding is planned, not yet included.</p></div>
         </div>
       </div>
     </section>

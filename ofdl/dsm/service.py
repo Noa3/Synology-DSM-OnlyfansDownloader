@@ -316,6 +316,10 @@ class Scheduler(threading.Thread):
                 LOG.exception('scheduler tick failed')
 
     def tick(self) -> None:
+        with self.state.job_manager.lock:
+            self._tick()
+
+    def _tick(self) -> None:
         paths = self.state.paths
         with control_db.connect(paths.db) as db:
             schedule = control_db.get_json(db, 'schedule', {})
@@ -340,7 +344,12 @@ class Scheduler(threading.Thread):
         active = self.state.job_manager._active()
         if active is not None:
             return
-        options = schedule.get('options') or defaults
+        options = dict(schedule.get('options') or defaults)
+        output = self.state.output_dir()
+        if output is None:
+            return
+        # Saved schedules from older revisions may contain a stale destination.
+        options['output_dir'] = str(output)
         try:
             payload = normalize_download_options(options, paths)
             self.state.job_manager.start('download', payload)
@@ -372,32 +381,11 @@ class AppState:
         self.scheduler = Scheduler(self) if start_scheduler else None
         if self.scheduler is not None:
             self.scheduler.start()
-        self.ensure_output_dir()
 
     # -- paths / settings -------------------------------------------------
     def ensure_output_dir(self) -> Path | None:
-        with control_db.connect(self.paths.db) as db:
-            configured = control_db.get_setting(db, 'output_dir', '')
-            share_root = resolve_share_root(self.paths)
-            if share_root is not None:
-                control_db.set_setting(db, 'share_root', str(share_root))
-            if configured:
-                try:
-                    return resolve_output_dir(configured, self.paths)
-                except AppError:
-                    # Keep the configured path: a temporarily unmounted volume
-                    # must not silently replace the user's library location.
-                    return None
-            fallback = default_output_dir(self.paths)
-            if fallback is None:
-                return None
-            try:
-                fallback.mkdir(parents=True, exist_ok=True)
-                self.apply_share_permissions(fallback)
-                control_db.set_setting(db, 'output_dir', str(fallback))
-                return fallback
-            except OSError:
-                return None
+        """Compatibility entry point; never create or select a library implicitly."""
+        return self.output_dir()
 
     @staticmethod
     def apply_share_permissions(path: Path) -> None:
@@ -414,9 +402,11 @@ class AppState:
 
     def output_dir(self) -> Path | None:
         with control_db.connect(self.paths.db) as db:
+            if control_db.get_setting(db, 'library_confirmed', '') != '1':
+                return None
             configured = control_db.get_setting(db, 'output_dir', '')
         if not configured:
-            return self.ensure_output_dir()
+            return None
         try:
             return Path(configured).resolve()
         except OSError:
@@ -433,7 +423,8 @@ class AppState:
             proxy = control_db.get_setting(db, 'proxy', '')
             rules_source = control_db.get_setting(db, 'rules_source', '')
             last_run = control_db.get_setting(db, 'schedule_last_run', '')
-            output_dir = control_db.get_setting(db, 'output_dir', '')
+            confirmed = control_db.get_setting(db, 'library_confirmed', '') == '1'
+            output_dir = control_db.get_setting(db, 'output_dir', '') if confirmed else ''
         share = resolve_share_root(self.paths)
         share_default = default_output_dir(self.paths)
         return {
@@ -497,7 +488,8 @@ class AppState:
     def library(self) -> dict[str, Any]:
         output = self.output_dir()
         now = time.monotonic()
-        if self._library_cache and now - self._library_cache[0] < 5.0:
+        if (self._library_cache and now - self._library_cache[0] < 5.0
+                and self._library_cache[1].get('output_dir') == (str(output) if output else '')):
             return self._library_cache[1]
         stats = control_db.library_stats(output)
         stats['output_dir'] = str(output) if output else ''
@@ -543,7 +535,8 @@ class AppState:
             'parent': parent,
             'root': str(root),
             'roots': [str(item) for item in roots],
-            'writable': directory_is_writable(current),
+            # Browsing must not create even a temporary write-probe file.
+            'writable': os.access(current, os.W_OK),
             'items': items,
         }
 
@@ -791,6 +784,10 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def _handle(self, method: str) -> None:
         self._cookie: str | None = None
+        # Some actions (logout, pause/cancel) intentionally need no body. Never
+        # reuse their connection with an unread body as the next HTTP request.
+        if method not in {'GET', 'HEAD'}:
+            self.close_connection = True
         try:
             parsed = urlsplit(self.path)
             path = unquote(parsed.path)
@@ -1062,7 +1059,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             session = self.require_auth()
             self.require_csrf(session[1])
             body = self.read_json()
-            self._update_settings(body)
+            with self.state.job_manager.lock:
+                self._update_settings(body)
             self.send_json(200, self.state.public_settings())
             return
         if path == '/api/jobs':
@@ -1187,6 +1185,11 @@ class RequestHandler(BaseHTTPRequestHandler):
                 pending['output_dir'] = str(resolve_output_dir(body.get('output_dir'), paths))
             except AppError as exc:
                 raise HTTPError(400, str(exc)) from None
+            pending['library_confirmed'] = '1'
+            with self.state.job_manager.lock:
+                if (self.state.job_manager._active() is not None
+                        and pending['output_dir'] != str(self.state.output_dir() or '')):
+                    raise HTTPError(409, 'Der Bibliothekspfad kann während eines Auftrags nicht geändert werden.')
         if 'schedule' in body:
             try:
                 pending['schedule'] = normalize_schedule(body.get('schedule'))
@@ -1217,6 +1220,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.state._library_cache = None
 
     def _start_job(self, kind_override: str | None = None, options_override: Any = None) -> None:
+        with self.state.job_manager.lock:
+            self._start_job_locked(kind_override, options_override)
+
+    def _start_job_locked(self, kind_override: str | None = None, options_override: Any = None) -> None:
         paths = self.state.paths
         body = self.read_json() if kind_override is None else {}
         kind = kind_override or str(body.get('kind') or '')
@@ -1225,6 +1232,14 @@ class RequestHandler(BaseHTTPRequestHandler):
         options = options_override if options_override is not None else (body.get('options') or {})
         if not isinstance(options, dict):
             raise HTTPError(400, 'Die Auftragsoptionen sind ungültig.')
+        if kind in {'download', 'preview'}:
+            configured = self.state.output_dir()
+            if configured is None:
+                raise HTTPError(409, 'Bitte zuerst den Bibliothekspfad in den Einstellungen speichern.')
+            requested = options.get('output_dir')
+            if requested and Path(str(requested)).resolve() != configured:
+                raise HTTPError(409, 'Der Auftrag muss den gespeicherten Bibliothekspfad verwenden.')
+            options = {**options, 'output_dir': str(configured)}
         if kind in {'test_session', 'subscriptions', 'download'} and self.state.session_store.load() is None:
             raise HTTPError(409, 'Es ist keine Sitzung eingerichtet. Bitte zuerst eine Sitzung importieren.')
         payload: dict[str, Any]

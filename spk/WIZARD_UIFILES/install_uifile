@@ -36,7 +36,7 @@
         ]
       },
       {
-        "desc": "The shared folder OnlyFansDL is created automatically. The download folder defaults to OnlyFansDL/OnlyFans and can be changed later in the web interface. Existing libraries and .ofdl.sqlite3 manifests can be selected there."
+        "desc": "No shared folders are created automatically. After installation, grant sc-onlyfansdl read/write access to your chosen share in DSM (Permissions > System internal user), then select the existing library folder under Settings. Existing files and manifests are preserved."
       }
     ]
   }

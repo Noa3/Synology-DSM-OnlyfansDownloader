@@ -50,7 +50,7 @@ class PackageTests(unittest.TestCase):
             key, _, value = line.partition('=')
             values[key] = value.strip('"')
         self.assertEqual(values['package'], 'OnlyFansDL')
-        self.assertEqual(values['version'], '2.8.0-3')
+        self.assertEqual(values['version'], '2.8.0-4')
         self.assertEqual(values['arch'], 'r1000')
         self.assertEqual(values['os_min_ver'], '7.2-64570')
         self.assertEqual(values['adminport'], '8765')
@@ -104,9 +104,10 @@ class PackageTests(unittest.TestCase):
         self.assertEqual(privilege['groupname'], 'synocommunity')
         self.assertNotIn('join-groupname', privilege)
         self.assertNotIn('ctrl-script', privilege)
-        shares = resource['data-share']['shares']
-        self.assertEqual([share['name'] for share in shares], ['OnlyFansDL', 'OnlyFans'])
-        self.assertIn('sc-onlyfansdl', shares[0]['permission']['rw'])
+        self.assertNotIn('data-share', resource, 'installation must not create or grant shares')
+        postinst = (ROOT / 'spk/scripts/install.sh').read_text(encoding='utf-8')
+        self.assertNotIn('OFDL_SHARE_ROOT=', postinst)
+        self.assertNotIn('--share-root', postinst)
         for document in (wizard, wizard_ger):
             keys = [item.get('subitems', [{}])[0].get('key') for item in document[0]['items']
                     if item.get('type') == 'password']

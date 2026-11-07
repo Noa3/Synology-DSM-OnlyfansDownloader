@@ -17,10 +17,10 @@ Versionsangaben.
   HTTPS-Reverse-Proxy davor.
 - Der Steuerdienst läuft als eigener DSM-Dienstbenutzer `sc-onlyfansdl` und
   fordert **keine** root- oder Administratorgruppen-Rechte an.
-- Die Freigaben `OnlyFansDL` und `OnlyFans` werden über den DSM-`data-share`-
-  Worker für das Dienstkonto freigegeben. Andere Zielordner benötigen eine
-  explizite Freigabeberechtigung für `sc-onlyfansdl`; die Oberfläche meldet
-  andernfalls einen Berechtigungsfehler.
+- Keine `data-share`-Ressource: Installation und Start erstellen keine
+  Benutzerfreigaben. Der Administrator erteilt `sc-onlyfansdl` ausschließlich
+  auf der gewählten Freigabe Les-/Schreibrecht und bestätigt den Bibliothekspfad
+  in der App. Vor dieser Bestätigung sind Downloads und Zeitplan gesperrt.
 - Die OnlyFans-Sitzung wird ausschließlich lokal gespeichert
   (`var/data/session.json`, Modus `0600`). Sie wird nicht an Dritte gesendet und
   nicht in Einstellungen, Auftragsdaten oder Protokollen abgelegt.
@@ -50,14 +50,16 @@ Versionsangaben.
   geschützt. Wer den Port 8765 ins Internet weiterleitet, gefährdet die Sitzung.
   Nutze DSM-Reverse-Proxy/HTTPS, eine Firewall und nach Möglichkeit
   `OFDL_COOKIE_SECURE=1` (Umgebungsvariable des Dienstes).
-- **Dateizugriff**: Der Dienstbenutzer ist bewusst unprivilegiert. Er kann nur
-  auf die Freigaben `OnlyFansDL` und `OnlyFans` sowie auf Ordner zugreifen, für
-  die ihm ausdrücklich Rechte erteilt wurden. Eine bestehende Bibliothek in
-  einer anderen Freigabe muss in eine dieser Freigaben verschoben/kopiert oder
-  dem Dienstkonto freigegeben werden.
+- **Dateizugriff**: Der Dienstbenutzer ist bewusst unprivilegiert. DSM-Rechte
+  begrenzen seinen Dateizugriff; die App verwendet einen ausdrücklich
+  gespeicherten Bibliothekspfad. Alte Freigaben und ACLs werden vom Update nicht
+  gelöscht oder widerrufen. Nicht benötigte Freigaberechte in DSM entfernen.
 - **Sitzungsimport**: Der eingefügte Text kann Cookies enthalten. Er wird im
   Browser verarbeitet und per HTTP an den lokalen Dienst gesendet. Keine
-  HAR-Datei in einem geteilten Browser-Tab offen lassen.
+  HAR-Datei in einem geteilten Browser-Tab offen lassen. Die Dateiauswahl allein
+  überträgt nichts; erst Importieren sendet den Inhalt. Exportdateien enthalten
+  Zugangsdaten: nicht weitergeben und anschließend sicher löschen. Ein fremdes
+  Login-Fenster wird nicht ausgelesen; CSP/Klickschutz bleiben aktiv.
 - **Kein DRM-Bypass**: DRM-geschützte Medien werden gezählt und übersprungen.
   Es werden keine geschützten Inhalte entschlüsselt.
 - **Keine Kaufautomatisierung**: Käufe und kostenpflichtige Aktionen sind nicht

@@ -114,11 +114,7 @@ def resolve_output_dir(value: Any, paths: Paths, *, require_writable: bool = Tru
         if require_writable and not directory_is_writable(path):
             raise AppError('Der Downloadordner ist nicht beschreibbar. Prüfe die Freigabeberechtigung.')
     else:
-        parent = path.parent
-        if not parent.is_dir():
-            raise AppError('Der übergeordnete Ordner existiert nicht.')
-        if not directory_is_writable(parent):
-            raise AppError('Der übergeordnete Ordner ist nicht beschreibbar.')
+        raise AppError('Der Downloadordner existiert nicht. Bitte einen vorhandenen Ordner wählen oder ausdrücklich anlegen.')
     return path
 
 

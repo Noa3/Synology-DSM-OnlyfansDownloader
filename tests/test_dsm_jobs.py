@@ -79,6 +79,12 @@ class JobValidationTests(unittest.TestCase):
         with self.assertRaises(AppError):
             self.options(output_dir=str(self.root / 'elsewhere'))
 
+    def test_no_implicit_or_missing_destination(self):
+        for value in ('', str(self.share / 'not-created')):
+            with self.assertRaises(AppError):
+                self.options(output_dir=value)
+        self.assertFalse((self.share / 'not-created').exists())
+
     def test_preview_path_must_stay_inside_output(self):
         media = self.share / 'OnlyFans' / 'photo.jpg'
         media.write_bytes(b'not an image')

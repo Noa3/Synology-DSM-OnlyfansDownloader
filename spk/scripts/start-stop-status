@@ -15,16 +15,6 @@ PIDFILE="$PKGVAR/service.pid"
 LOG="$LOGS/service.log"
 PORT="${OFDL_PORT:-8765}"
 
-SHARE="$PKGROOT/shares/OnlyFansDL"
-if [ ! -d "$SHARE" ]; then
-    for candidate in /volume*/OnlyFansDL; do
-        if [ -d "$candidate" ]; then
-            SHARE="$candidate"
-            break
-        fi
-    done
-fi
-
 is_running() {
     [ -f "$PIDFILE" ] || return 1
     pid="$(cat "$PIDFILE" 2>/dev/null || true)"
@@ -55,7 +45,6 @@ case "${1:-}" in
         OFDL_PREVIEW_DIR="$DATA/previews" \
         OFDL_TMP_DIR="$TMP" \
         OFDL_HOME="$HOME_DIR" \
-        OFDL_SHARE_ROOT="$SHARE" \
         OFDL_VENV="$VENV" \
         OFDL_BIND="${OFDL_BIND:-0.0.0.0}" \
         OFDL_PORT="$PORT" \

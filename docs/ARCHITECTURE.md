@@ -112,12 +112,14 @@ Darstellung. Die Sitzung liegt in `session.json` (0600), nie in `settings`.
 
 ## Ordner und Berechtigungen
 
-- `conf/resource` legt die Freigaben `OnlyFansDL` und `OnlyFans` an und gibt
-  dem Dienstbenutzer `sc-onlyfansdl` Les-/Schreibrecht. `OnlyFans` dient als
-  Migrationspfad für eine bestehende Bibliothek.
-- `conf/privilege` setzt `run-as: package`, den Benutzer `sc-onlyfansdl` und
-  `ctrl-script` für alle Lebenszyklusaktionen ebenfalls auf `package`. Es wird
-  **keine** root- oder Administratorgruppen-Mitgliedschaft angefordert.
+- `conf/resource` ist leer. Es werden keine Freigaben erstellt oder automatisch
+  berechtigt. `bootstrap`, Installation und Start wählen keinen Bibliothekspfad.
+- `settings.output_dir` ist der einzige Bibliothekspfad. Erst explizites Speichern
+  setzt `library_confirmed=1`; auch ältere automatisch gewählte Pfade brauchen
+  diese Bestätigung. Jobs mit abweichendem Pfad werden abgelehnt, Zeitpläne
+  verwenden den aktuellen Pfad statt alter Snapshots. Ein Job sperrt Pfadwechsel.
+- `conf/privilege` setzt `run-as: package`, `sc-onlyfansdl` und Gruppe
+  `synocommunity`. Kein `ctrl-script`, keine root-/Administratorgruppe.
 - Der Ordner-Dialog liest nur Verzeichnisnamen (maximal 500 pro Ebene), keine
   Dateiinhalte. Er erlaubt keine Pfade außerhalb der freigegebenen Volumes.
   Andere Freigaben funktionieren nur, wenn das Dienstkonto dort Leserechte hat;
@@ -131,7 +133,7 @@ Darstellung. Die Sitzung liegt in `session.json` (0600), nie in `settings`.
 Die Engine prüft zuerst den erwarteten Pfad und danach das vorhandene
 `.ofdl.sqlite3`. Erst wenn beides fehlt, wird der Creator-Baum einmalig nach
 alten Layouts durchsucht (LegacyIndex). Es werden keine Dateien gelöscht oder
-umbenannt. Ein bestehender Ordner kann im Download-Bereich ausgewählt werden;
+umbenannt. Ein bestehender Ordner wird unter Einstellungen ausgewählt;
 die Dateistruktur bleibt unverändert.
 
 ## Zeitplanung

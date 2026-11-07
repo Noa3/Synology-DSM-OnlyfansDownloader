@@ -41,6 +41,11 @@
   </nav>
 
   <main class="content">
+    <article id="storage-setup" class="card" hidden>
+      <h2>Bibliotheksordner auswählen</h2>
+      <p>Bitte zuerst unter Einstellungen einen vorhandenen Ordner auswählen und speichern. Es werden keine Freigaben automatisch angelegt.</p>
+      <button id="setup-storage" class="primary" type="button">Einstellungen</button>
+    </article>
     <section id="tab-dashboard" class="tab-panel active" role="tabpanel" aria-labelledby="tab-dashboard">
       <div class="grid two">
         <article class="card job-card">
@@ -105,9 +110,8 @@
         <article class="card">
           <div class="card-head"><h2>Zielordner</h2></div>
           <div class="field-row">
-            <input id="output-dir" type="text" spellcheck="false" autocomplete="off" aria-label="Downloadordner">
-            <button id="browse-folder" class="ghost" type="button">Durchsuchen</button>
-            <button id="use-default-folder" class="ghost" type="button">Standard</button>
+            <input id="output-dir" type="text" readonly aria-label="Downloadordner">
+            <button id="browse-folder" class="ghost" type="button">In Einstellungen ändern</button>
           </div>
           <p class="hint">Der Ordner liegt auf dem NAS. Bestehende Dateien, Unterordner und <code>.ofdl.sqlite3</code> werden weiterverwendet.</p>
         </article>
@@ -202,10 +206,18 @@
 
         <article class="card">
           <div class="card-head"><h2>Sitzung importieren</h2></div>
+          <ol class="bullets">
+            <li><a href="https://onlyfans.com/" target="_blank" rel="noopener noreferrer">OnlyFans im Browser öffnen</a> · <span>Im eigenen Browser anmelden, einschließlich Zwei-Faktor-Anmeldung.</span></li>
+            <li>Entwicklertools (F12) → Netzwerk → eine Anfrage an /api2/v2/ auswählen → Kopieren → Als cURL (bash) kopieren.</li>
+            <li>Unten einfügen und importieren. Danach Sitzung testen.</li>
+          </ol>
+          <p class="hint">Ein eingebettetes Login kann die Sitzung nicht automatisch übernehmen. Passwort und Zwei-Faktor-Code bleiben bei OnlyFans. cURL/HAR enthalten Zugangsdaten: nicht teilen und Exportdateien anschließend löschen.</p>
           <label for="session-text">cURL (bash), HAR, JSON oder Roh-Header aus deinem eingeloggten Browser</label>
           <textarea id="session-text" rows="10" spellcheck="false" placeholder="curl 'https://onlyfans.com/api2/v2/...' -H 'Cookie: ...' -H 'user-id: ...' -H 'x-bc: ...' -H 'user-agent: ...'"></textarea>
           <div class="button-row">
             <button id="import-session" class="primary" type="button">Importieren</button>
+            <label for="session-file">Datei auswählen (HAR/JSON/cURL, max. 2 MB)</label>
+            <input id="session-file" type="file" accept=".har,.json,.txt,.curl">
           </div>
           <p class="hint">Kopiere eine Anfrage an <code>https://onlyfans.com/api2/v2/</code>. Der Import wird nie ausgeführt. Ein HAR kann groß sein; maximal 2 MB.</p>
         </article>
@@ -239,7 +251,8 @@
           <div><dt>Schreibbar</dt><dd id="library-writable">–</dd></div>
           <div><dt>Freier Platz</dt><dd id="library-disk">–</dd></div>
         </dl>
-        <p class="hint">Die Zählung kommt aus dem vorhandenen <code>.ofdl.sqlite3</code> und liest keine Mediendateien. Ein bestehender Ordner kann im Download-Bereich ausgewählt werden; die Dateistruktur bleibt unverändert.</p>
+        <p id="library-error" class="error" role="status"></p>
+        <p class="hint">Die Zählung kommt aus dem vorhandenen <code>.ofdl.sqlite3</code>. Downloads, Bibliothek und Zeitplan verwenden den gespeicherten Pfad unter Einstellungen. Ohne Manifest sind vorhandene Dateien nicht automatisch gezählt.</p>
       </article>
       <article class="card">
         <div class="card-head"><h2>Hinweise für große Bibliotheken</h2></div>
@@ -253,6 +266,17 @@
     </section>
 
     <section id="tab-settings" class="tab-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <article class="card">
+        <div class="card-head"><h2>Bibliothekspfad</h2></div>
+        <p class="hint">In DSM: Systemsteuerung → Gemeinsamer Ordner → Bearbeiten → Berechtigungen → Systeminterner Benutzer → sc-onlyfansdl → Lesen/Schreiben. Keine Administratorrechte nötig.</p>
+        <div class="field-row">
+          <input id="library-dir" type="text" spellcheck="false" autocomplete="off" aria-label="Downloadordner">
+          <button id="browse-library" class="ghost" type="button">Durchsuchen</button>
+          <button id="save-library" class="primary" type="button">Pfad speichern</button>
+        </div>
+        <p class="hint">Ein gemeinsamer Pfad für Downloads, Bibliothek und Zeitplan. Speichern verschiebt und löscht keine Dateien. Neue Unterordner entstehen nur nach ausdrücklichem Anlegen oder beim gestarteten Download.</p>
+        <p class="hint">Bereits von älteren Versionen angelegte Freigaben bleiben erhalten. Nur selbst in DSM entfernen, nachdem ihr Inhalt geprüft wurde.</p>
+      </article>
       <article class="card">
         <div class="card-head"><h2>Zeitplan</h2></div>
         <label class="check-row">
@@ -316,6 +340,7 @@
   </div>
 
   <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/static/languages.js" defer></script>
   <script src="/static/i18n.js" defer></script>
   <script src="/static/app.js" defer></script>
 </body>

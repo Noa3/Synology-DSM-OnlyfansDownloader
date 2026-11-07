@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = 'OnlyFansDL'
-VERSION = '2.8.0-3'
+VERSION = '2.8.0-4'
 ARCH = 'r1000'
 DSM_MIN = '7.2-64570'
 PORT = '8765'
@@ -203,9 +203,9 @@ def info_text(checksum: str) -> str:
         ('silent_upgrade', 'yes'),
         ('reloadui', 'yes'),
         ('install_dep_packages', 'python313>=3.13.11-9'),
-        ('changelog', '2.8.0-3: Use the supported SynoCommunity package privilege pattern '
-                      '(no administrator group, no ctrl-script block). 2.8.0-2: Bilingual UI/site, '
-                      'cleaned repository. 2.8.0-1: Native DSM package.'),
+        ('changelog', '2.8.0-4: Explicit library selection, no automatic shared folders, '
+                      'one destination for downloads/library/schedules, French and Spanish UI, '
+                      'guided session import. DSM desktop embedding remains planned.'),
         ('checksum', checksum),
     ]
     lines = [f'{key}="{value}"' for key, value in values]
