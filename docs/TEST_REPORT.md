@@ -5,12 +5,13 @@ Der vollständige aktuelle Bericht liegt zentral in
 entstehen. / The full current report is maintained in one place:
 [`TEST_REPORT.md`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/TEST_REPORT.md).
 
-## 2.8.0-4
+## 2.8.0-5
 
-- 346 Python tests: zero failures, one Windows symlink skip.
-- 52 DSM-specific tests: zero failures.
-- Browser regression: DE/EN/FR/ES, explicit storage selection, manifest path,
-  folder confirmation, session file import and persistence passed locally.
+- 363 local Python tests: zero failures, three Windows skips. 69 DSM-specific
+  tests: zero failures, two real-Linux skips. Linux CI: central report above.
+- Browser regression: seven languages, simulated DSM locale/override, reload
+  during work, separate event/boot failures, reconnection, scan/file progress,
+  mobile width, explicit storage and session persistence passed locally.
 - No direct NAS access: real DSM upgrade/permissions/installation, PSS and
   authenticated OnlyFans downloads remain unverified.
 - No NAS folders deleted. No automatic shared-folder creation in this release.

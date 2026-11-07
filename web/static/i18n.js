@@ -3,6 +3,7 @@
   'use strict';
 
   const EN = {
+    ...(window.ofdlEnglishExtras || {}),
     'Bibliotheksordner auswählen': 'Choose library folder',
     'Bibliothekspfad': 'Library path',
     'Pfad speichern': 'Save path',
@@ -329,11 +330,15 @@
     'Sprache / Language': 'Language'
   };
 
-  const languages = { de: 'Deutsch', en: 'English', fr: 'Français', es: 'Español' };
+  const languages = { de: 'Deutsch', en: 'English', fr: 'Français', es: 'Español', it: 'Italiano', nl: 'Nederlands', pt: 'Português' };
   let stored = '';
   try { stored = localStorage.getItem('ofdl_lang') || ''; } catch (_) { /* Private browsing. */ }
   const preferred = String(navigator.language || 'en').toLowerCase().split('-')[0];
-  let lang = Object.hasOwn(languages, stored) ? stored : (Object.hasOwn(languages, preferred) ? preferred : 'en');
+  let mode = Object.hasOwn(languages, stored) ? stored : 'auto';
+  let lang = mode === 'auto' ? (Object.hasOwn(languages, preferred) ? preferred : 'en') : mode;
+  let source = mode === 'auto' ? 'browser' : 'manual';
+  let resolveReady;
+  const ready = new Promise((resolve) => { resolveReady = resolve; });
   let originalTitle = document.title;
   const textOriginals = new WeakMap();
   const attrOriginals = new WeakMap();
@@ -404,36 +409,72 @@
     applyTextNodes(document.body);
     applyAttributes('[placeholder]', 'placeholder', PLACEHOLDER_EN);
     applyAttributes('[aria-label]', 'aria-label', ARIA_EN);
-    document.querySelectorAll('#language-select').forEach((select) => { select.value = lang; });
+    document.querySelectorAll('#language-select').forEach((select) => { select.value = mode; });
   }
 
-  function setLanguage(next) {
-    const value = Object.hasOwn(languages, next) ? next : 'en';
-    if (value === lang) { applyDom(); return; }
-    lang = value;
-    try { localStorage.setItem('ofdl_lang', lang); } catch (_) { /* Private browsing. */ }
+  async function setLanguage(next) {
+    mode = Object.hasOwn(languages, next) ? next : 'auto';
+    if (mode === 'auto') await detectLanguage();
+    else { lang = mode; source = 'manual'; }
+    try { localStorage.setItem('ofdl_lang', mode); } catch (_) { /* Private browsing. */ }
     applyDom();
     document.dispatchEvent(new CustomEvent('ofdl-language', { detail: lang }));
   }
 
-  function init() {
+  function normalizeLanguage(value) {
+    const aliases = { ger: 'de', enu: 'en', fre: 'fr', spn: 'es', ita: 'it', nld: 'nl', ptg: 'pt', ptb: 'pt' };
+    const text = String(value || '').toLowerCase().split(/[-_]/)[0];
+    const language = aliases[text] || text;
+    return Object.hasOwn(languages, language) ? language : '';
+  }
+
+  async function detectLanguage() {
+    let hint = '';
+    try {
+      hint = normalizeLanguage(new URLSearchParams(location.search).get('dsm_lang'));
+      if (!hint) {
+        for (const cookie of document.cookie.split(';')) {
+          const [key, value] = cookie.trim().split('=');
+          if (['lang', 'language'].includes(key)) hint = normalizeLanguage(decodeURIComponent(value || ''));
+          if (hint) break;
+        }
+      }
+    } catch (_) { /* Missing/inaccessible DSM locale cookie. */ }
+    if (hint) { lang = hint; source = 'dsm-hint'; return; }
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    try {
+      const response = await fetch('/api/locale', { signal: controller.signal, cache: 'no-store' });
+      if (response.ok) hint = normalizeLanguage((await response.json()).language);
+    } catch (_) { /* Standalone/local run or unavailable DSM config. */ }
+    finally { clearTimeout(timer); }
+    if (mode !== 'auto') return;
+    lang = hint || normalizeLanguage(navigator.language) || 'en';
+    source = hint ? 'dsm-system' : 'browser';
+  }
+
+  async function init() {
     document.querySelectorAll('#language-select').forEach((select) => {
-      select.replaceChildren(...Object.entries(languages).map(([value, label]) => {
+      select.replaceChildren(...Object.entries({ auto: 'Auto · DSM / Browser', ...languages }).map(([value, label]) => {
         const option = document.createElement('option');
         option.value = value;
         option.textContent = label;
         return option;
       }));
-      select.value = lang;
+      select.value = mode;
       select.addEventListener('change', () => setLanguage(select.value));
     });
+    if (mode === 'auto') await detectLanguage();
     applyDom();
+    resolveReady();
   }
 
   window.ofdlI18n = {
     t: translate,
     setLanguage,
     getLanguage: () => lang,
+    getSource: () => source,
+    ready,
     apply: applyDom,
   };
 

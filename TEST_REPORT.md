@@ -1,4 +1,4 @@
-# Testbericht — OnlyFans DL für Synology DSM 2.8.0-4
+# Testbericht — OnlyFans DL für Synology DSM 2.8.0-5
 
 Build-Datum: **2026-11-07**
 Zielplattform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 aus SynoCommunity**
@@ -15,8 +15,8 @@ Testumgebung: Windows 11, CPython 3.13.12, Chromium/Playwright
 
 | Prüfung | Ergebnis | Ort |
 | --- | --- | --- |
-| Vollständige Python-Testsuite | **346 Tests, 0 Fehler, 1 Skip** | lokal |
-| DSM-spezifische Tests | **52 Tests, 0 Fehler** | lokal |
+| Vollständige Python-Testsuite | **363 Tests, 0 Fehler, 3 Skips** | lokal |
+| DSM-spezifische Tests | **69 Tests, 0 Fehler, 2 Linux-Skips** | lokal |
 | Paketbau | **bestanden** | lokal |
 | Reproduzierbarer Bau (zweimal) | **byte-identisch** | lokal |
 | Browser-UI (Playwright) | **bestanden**, keine Konsolenfehler | lokal |
@@ -29,8 +29,10 @@ Testumgebung: Windows 11, CPython 3.13.12, Chromium/Playwright
 | PSS im Leerlauf auf DS723+ | **AUSSTEHEND** | DSM |
 | Echte OnlyFans-Sitzung / API | **AUSSTEHEND** | Zielkonto |
 
-Der eine Skip ist `test_symlink_escape_is_rejected`: Windows erlaubt in dieser
-Umgebung keine Symlink-Erzeugung. Der Test läuft auf Linux/DSM.
+Windows überspringt den Symlink-Rechtetest sowie zwei echte Linux-Prozesstests.
+Letztere prüfen eine verwaiste Worker-Kindgruppe und das Stoppen des Dienstes
+bei fehlender PID-Datei. Sie werden in der Linux-CI ausgeführt, nicht als native
+DSM-Tests ausgegeben.
 
 ## Ausgeführter Befehl
 
@@ -41,8 +43,8 @@ python -m unittest discover -s tests
 Auszug:
 
 ```
-Ran 346 tests in 91.761s
-OK (skipped=1)
+Ran 363 tests in 118.857s
+OK (skipped=3)
 ```
 
 Die DSM-Tests umfassen:
@@ -55,6 +57,7 @@ Die DSM-Tests umfassen:
 | `tests/test_dsm_worker.py` | Pause/Abbruch, EventWriter, Preview, Abonnements, Download-Mapping |
 | `tests/test_dsm_service.py` | Setup/Login/CSRF, Rechte, Ordner, Jobs, Preview, statische Dateien, Rate-Limit, leichter Import |
 | `tests/test_dsm_package.py` | INFO, Checksumme, Inhalte, Rechte, JSON, Shell-Syntax, Reproduzierbarkeit |
+| `tests/test_dsm_resilience.py` | Thread-Fortschritt, Schreibsperren, NaN-JSON, Ereignis-Tail, Sitzungswechsel, DSM-Locale, Free-Resub-Preisschutz, API-Backoff, PID-Reuse und Linux-Prozessbäume |
 
 Zusätzlich prüft `test_dsm_service.py` in einem frischen Prozess, dass der
 Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
@@ -63,15 +66,15 @@ Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
 ## Paketprüfung
 
 ```
-Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-4.spk
-Größe:  21,99 MiB
-SHA256: 650cc17ab1eeecc8eee3a659a30e299f93f185fa30fb10a6b219c45caacc277c
-MD5(package.tgz): f2ba495350377c13412729f67bc6cbed
+Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-5.spk
+Größe: 22,01 MiB
+SHA256: bc6a778f6b6e6f3f143b8ddc1b28e986f600f67e454b81141bbd723c7c09d1c6
+MD5(package.tgz): 27fc1b80a29ea02a6747dc6c5a8dbfb7
 ```
 
 Geprüft:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-4`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-5`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
   `install_dep_packages=python313>=3.13.11-9`, MD5-Checksumme stimmt.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
@@ -100,7 +103,8 @@ Geprüft:
 `python tools/test_web_ui.py` mit Playwright (Chromium, headless, 1440×1100)
 prüft mit synthetischer Sitzung und lokalen Manifesten, ohne echtes Konto:
 
-- Setup/Login-Sprachumschaltung Deutsch/Englisch/Französisch/Spanisch
+- Setup/Login und Hauptoberfläche mit sieben Sprachen; simulierte DSM-System-
+  sprache und Sprachcookie, manueller Vorrang und Rückkehr zu Auto
 - Erster Start ohne Bibliothek → Einstellungen, kein impliziter Zielordner
 - Gespeicherter Pfad für Downloads und Bibliothek; Manifestwechsel sofort sichtbar
 - Ordnererstellung: Bestätigung ablehnen erzeugt nichts, Bestätigung erlauben
@@ -108,11 +112,18 @@ prüft mit synthetischer Sitzung und lokalen Manifesten, ohne echtes Konto:
 - Dateiauswahl sendet keine Sitzung; Import erst nach ausdrücklichem Klick
 - Sprachenwechsel durch alle Tabs, Pfad bleibt korrekt; Neuladen behält Pfad
 - Abmelden/Login ohne beschädigte HTTP-Folgeanfrage
+- Reload während laufendem Auftrag: Status und letzte 100 Ereignisse erscheinen
+- Ausfall nur der Ereignisabfrage: Dienst bleibt online, Auftrag bleibt sichtbar
+- Fehlgeschlagener Erstaufruf: automatischer neuer Versuch ohne manuelles Reload
+- Unbekannte Scan-Gesamtmenge ohne Prozentzahl; separate Datei-Byteanzeige;
+  nach Ende der Suche plausibler Gesamtfortschritt und sichtbare 401-Fehler
+- Mobile Breite 375 px ohne Überlauf in Übersicht, Free & Trials und Einstellungen
 - keine `console.error`/`pageerror`-Meldungen
 - keine externen Ressourcen (CSP-konform)
 
-Ältere illustrative Screenshots (2.8.0-2, nicht der aktuelle Speicher-Dialog):
-`docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`,
+Aktuelle Dashboard-Screenshots sind synthetische lokale Tests, keine NAS-/
+echten Downloadmessungen: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`.
+Ältere illustrative Screenshots (nicht der aktuelle Speicher-Dialog):
 `docs/dsm-ui-folders.png`, `docs/dsm-ui-session.png`,
 `docs/dsm-ui-session-tested.png`, `docs/dsm-ui-settings.png`.
 
@@ -121,7 +132,7 @@ prüft mit synthetischer Sitzung und lokalen Manifesten, ohne echtes Konto:
 Die Messung erfolgte unter Windows. PSS ist dort nicht verfügbar; die
 DSM-Zielmarke bezieht sich auf PSS und muss mit `tools/measure_dsm.py` auf der
 DS723+ gemessen werden. Die folgenden Werte stammen aus der früheren Messung,
-nicht aus einem erneuten Speicherbenchmark von 2.8.0-4.
+nicht aus einem erneuten Speicherbenchmark von 2.8.0-5.
 
 | Zustand | Prozesse | RSS | Private |
 | --- | --- | ---: | ---: |
@@ -158,6 +169,9 @@ lädt die Datei nicht in den Speicher. Details: `docs/MEASUREMENT.md`.
 | 16 | Upgrade-Speicherzustimmung | Kein alter Pfad aktiv, bis in Einstellungen gespeichert | AUSSTEHEND |
 | 17 | Keine neuen Freigaben | Installation/Start legt weder OnlyFans noch OnlyFansDL an | AUSSTEHEND |
 | 18 | Benutzerrechte | Nur ausdrücklich gewählte Freigabe für sc-onlyfansdl erlaubt | AUSSTEHEND |
+| 19 | Vollständiges Stoppen | Dienst + Worker + ffmpeg bei aktivem/pausiertem/hängendem Auftrag beenden | AUSSTEHEND |
+| 20 | Echte Sitzungsprobleme | Browser/NAS parallel, 401/429/Netzfehler und kontrollierte Erholung prüfen | AUSSTEHEND |
+| 21 | Free-Resub | Nur autorisierte kostenlose Profile, echte API-Kompatibilität | AUSSTEHEND |
 
 ### Befehle für die DSM-Messung
 
@@ -174,6 +188,8 @@ Die Oberfläche zeigt unter **Übersicht → Dienst → Speicher** zusätzlich P
 des Dienstes und des aktiven Workers an.
 
 ## Bekannte, nicht geprüfte Punkte
+
+Linux-CI-Ergebnis wird nach dem gepushten Implementierungsstand ergänzt.
 
 - **Keine echte OnlyFans-Sitzung** und kein echter Mediendownload in dieser
   Umgebung. Die API-/Signatur-/Cloudflare-Kompatibilität kann sich ändern.

@@ -15,7 +15,7 @@ pip-Befehle** erforderlich.
 
 ## 2. Paket installieren
 
-1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-4.spk` aus dem Release herunterladen.
+1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-5.spk` aus dem Release herunterladen.
 2. Package Center → **Manuell installieren** → Datei auswählen.
 3. DSM zeigt die Abhängigkeit **Python 3.13** an und installiert sie
    automatisch aus der SynoCommunity-Quelle.
@@ -140,6 +140,20 @@ speicherschonend. Der erste Lauf nach einer Übernahme kann länger dauern, weil
 die Engine alte Layouts einmalig prüft; spätere Läufe nutzen exakte Pfade und
 das Manifest.
 
+## Free & Trials / kostenlose Wiederanmeldung
+
+Der Tab **Free & Trials** kann aktive/abgelaufene Abonnements und ausdrücklich
+angegebene Profile lesend nach Angeboten durchsuchen. **Angebote suchen** führt
+keine Anmeldungen aus. Für kostenlose Wiederanmeldungen nur gewünschte Profile
+in die Freigabeliste schreiben, Hinweis bestätigen und jetzt prüfen/anmelden
+oder die tägliche NAS-Uhrzeit speichern. Standard ist deaktiviert.
+
+Trial- und kostenpflichtige Profile werden nie automatisch angenommen. Trials
+können später kostenpflichtig verlängert werden; bitte auf OnlyFans prüfen.
+Auch bei kostenlosen Profilen kann eine Preisänderung zwischen Prüfung und
+Serverantwort nicht vollständig ausgeschlossen werden. Unklare POST-Ergebnisse
+werden am selben Tag nicht wiederholt. Kontowechsel deaktiviert die Automatik.
+
 ## 9. Update
 
 1. Neue `.spk` aus dem Release herunterladen.
@@ -147,6 +161,10 @@ das Manifest.
 3. DSM erkennt das Upgrade. Einstellungen, Sitzung, venv und Downloads bleiben
    erhalten; die Wheels werden bei Bedarf nachinstalliert.
 4. Das Web-Passwort bleibt unverändert.
+
+Es gibt derzeit **keine automatische Aktualisierung von GitHub** und keine
+eigene DSM-Paketquelle. Ein eventuell sichtbarer DSM-Schalter legt diese
+Verbindung nicht selbst an. Release-SPK manuell installieren.
 
 ## 10. Deinstallation
 
@@ -166,7 +184,7 @@ wieder, wenn derselbe Ordner ausgewählt wird.
 | Anmeldung funktioniert nicht | Passwort aus dem Installations-Wizard verwenden. Bei vergessenem Passwort Paket deinstallieren und neu installieren (Downloads bleiben erhalten) oder die Steuerdaten zurücksetzen. |
 | „Keine Sitzung eingerichtet“ | Unter **Sitzung** importieren und testen. |
 | Sitzungstest schlägt fehl | Anfrage von `onlyfans.com/api2/v2/` kopieren, nicht von einer anderen Seite. Session kann an Netz/IP gebunden sein; im gleichen Netz wie der Browser testen. Cloudflare-Anfragen werden nicht umgangen. |
-| „Paket benötigt root-Rechte“ / Administratorwarnung | Alte Versionen 2.8.0-1/2.8.0-2 ersetzen. 2.8.0-4 nutzt das SynoCommunity-Privileg-Muster ohne root-/Administratorgruppen-Rechte. Bei weiterer Warnung exakte DSM-Version und Meldung melden. |
+| „Paket benötigt root-Rechte“ / Administratorwarnung | Alte Versionen 2.8.0-1/2.8.0-2 ersetzen. 2.8.0-5 nutzt das SynoCommunity-Privileg-Muster ohne root-/Administratorgruppen-Rechte. Bei weiterer Warnung exakte DSM-Version und Meldung melden. |
 | Downloadordner nicht beschreibbar | In DSM dem Systeminternen Benutzer `sc-onlyfansdl` Lesen/Schreiben nur für die gewünschte Freigabe erlauben; dann den vorhandenen Pfad unter Einstellungen speichern. |
 | Kein DSM-Menüeintrag | Paket neu starten; `reloadui` wird beim Installieren gesetzt. Alternativ `http://<NAS-IP>:8765/` direkt öffnen. |
 | Viele Dateien, langsamer erster Lauf | Erwartet bei Altlayouts; Folgeläufe nutzen das Manifest. Keine Medien werden dauerhaft im Steuerdienst gehalten. |

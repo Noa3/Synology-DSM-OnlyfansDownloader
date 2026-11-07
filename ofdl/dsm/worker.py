@@ -6,6 +6,7 @@ worker owns the API session, the SQLite manifest access and all heavy imports.
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 import threading
@@ -77,7 +78,9 @@ class EventWriter:
     def __init__(self, paths: Paths, job_id: int):
         self.paths = paths
         self.job_id = int(job_id)
-        self.db = control_db.open_db(paths.db)
+        # emit() is called by both the scanner and download thread, serialized
+        # by self.lock. A default SQLite connection rejects that second thread.
+        self.db = control_db.open_db(paths.db, check_same_thread=False)
         self.lock = threading.RLock()
         self.event_count = 0
         self.last_commit = 0.0
@@ -133,8 +136,13 @@ class EventWriter:
                 self._emit(kind, value)
             except Exception as exc:  # never let a display update kill a job
                 print(f'event writer: {type(exc).__name__}', file=sys.stderr, flush=True)
+            finally:
+                # Never hold a write transaction while the worker is waiting on
+                # network I/O. That blocks pause/cancel and startup/settings.
+                self._commit(force=True)
 
     def _emit(self, kind: str, value: Any) -> None:
+        self.stats['last_activity_at'] = control_db.now_iso()
         if kind == 'log':
             self._event('log', sanitize_text(value, 1000))
         elif kind == 'phase':
@@ -152,8 +160,7 @@ class EventWriter:
             if isinstance(value, dict):
                 done = int(value.get('done') or 0)
                 total = int(value.get('total') or 0)
-                if total:
-                    self.stats['overall_total'] = total
+                self.stats['overall_total'] = total
                 self.stats['overall_done'] = done
                 self.stats['scanning'] = bool(value.get('scanning'))
                 now = time.monotonic()
@@ -164,14 +171,18 @@ class EventWriter:
         elif kind == 'progress':
             if isinstance(value, dict):
                 now = time.monotonic()
-                if now - self.last_progress >= 0.8:
+                if (now - self.last_progress >= 0.8
+                        or value.get('file') != self.stats.get('current_file')
+                        or value.get('done') == value.get('total')):
                     self.last_progress = now
                     self.stats['current_file'] = sanitize_text(value.get('file'), 300)
                     self.stats['current_done'] = int(value.get('done') or 0)
                     self.stats['current_total'] = int(value.get('total') or 0)
-                    self.stats['current_speed'] = float(value.get('speed') or 0)
+                    speed = float(value.get('speed') or 0)
+                    self.stats['current_speed'] = speed if math.isfinite(speed) and speed >= 0 else 0
                     self._update(stats=json.dumps(self.stats, ensure_ascii=False, separators=(',', ':')))
         elif kind == 'media_complete':
+            self.stats.update(current_file='', current_done=0, current_total=0, current_speed=0)
             if isinstance(value, dict):
                 compact = {
                     'relative': sanitize_text(value.get('relative'), 500),
@@ -183,6 +194,15 @@ class EventWriter:
         elif kind == 'pipeline':
             if isinstance(value, dict) and value.get('stage'):
                 self._update(phase=sanitize_text(value.get('stage'), 100))
+        elif kind == 'retry':
+            value = value if isinstance(value, dict) else {}
+            self.stats['retry_at'] = value.get('retry_at') if value.get('seconds') else None
+            self.stats['retry_reason'] = str(value.get('reason') or '')[:60]
+            self.stats['retry_attempt'] = int(value.get('attempt') or 0)
+            self._update(stats=json.dumps(self.stats, ensure_ascii=False, separators=(',', ':')))
+            if value.get('seconds'):
+                self._event('log', f'Vorübergehender Fehler ({self.stats["retry_reason"]}). '
+                            f'Lesende Anfrage wird nach {value["seconds"]:.0f} Sekunden erneut versucht. Abbruch bleibt möglich.')
         elif kind in {'result', 'error', 'cancelled', 'done'}:
             # The worker main handles these; keep them out of the event table.
             return
@@ -192,6 +212,7 @@ class EventWriter:
     def flush(self) -> None:
         with self.lock:
             try:
+                self._update(stats=json.dumps(self.stats, ensure_ascii=False, separators=(',', ':')))
                 self._commit(force=True)
             except Exception:
                 pass
@@ -251,6 +272,16 @@ def main(argv: list[str] | None = None) -> int:
 
     control = JobControl(paths, job_id)
     writer = EventWriter(paths, job_id)
+    heartbeat_stop = threading.Event()
+
+    def heartbeat() -> None:
+        while not heartbeat_stop.wait(5):
+            with writer.lock:
+                writer.stats['heartbeat_at'] = control_db.now_iso()
+                writer.flush()
+
+    heartbeat_thread = threading.Thread(target=heartbeat, name='ofdl-heartbeat', daemon=True)
+    heartbeat_thread.start()
     exit_code = 0
     try:
         result = run_job(paths, str(job['kind']), payload, control, writer.emit)
@@ -269,6 +300,9 @@ def main(argv: list[str] | None = None) -> int:
         exit_code = 1
         writer.flush()
         with control_db.connect(paths.db) as db:
+            from ..api import ApiError
+            if isinstance(exc, ApiError) and (exc.status == 401 or getattr(exc.details, 'category', '') == 'authentication-rejected'):
+                control_db.set_setting(db, 'session_verified', '0')
             control_db.finish_job(db, job_id, 'failed', error=sanitize_text(str(exc)), exit_code=exit_code)
     except Exception as exc:
         exit_code = 1
@@ -279,6 +313,8 @@ def main(argv: list[str] | None = None) -> int:
                                   error=f'Auftrag fehlgeschlagen ({type(exc).__name__}). Details stehen im Auftragsprotokoll.',
                                   exit_code=exit_code)
     finally:
+        heartbeat_stop.set()
+        heartbeat_thread.join(timeout=2)
         writer.flush()
         writer.close()
         control.stop()

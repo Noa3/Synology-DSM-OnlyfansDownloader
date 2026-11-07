@@ -34,8 +34,10 @@ from .config import (Paths, allowed_roots, default_output_dir, directory_is_writ
                      ensure_dirs, human_bytes, path_is_allowed, resolve_paths,
                      resolve_share_root)
 from .jobs import (CATEGORIES, normalize_download_options, normalize_preview,
-                   normalize_proxy, normalize_schedule, normalize_schedule_options,
-                   public_job, resolve_output_dir)
+                    normalize_proxy, normalize_schedule, normalize_schedule_options,
+                    public_job, resolve_output_dir, json_safe, normalize_renewal, parse_profiles)
+from .locale import dsm_language
+from .processes import register_worker, signal_worker
 from .security import (LoginLimiter, SecurityError, SessionStore, new_csrf, new_token,
                        redact_proxy, sanitize_text, set_password, verify_password)
 
@@ -56,7 +58,7 @@ class HTTPError(Exception):
 
 
 def _json_dump(value: Any) -> bytes:
-    return json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    return json.dumps(json_safe(value), ensure_ascii=False, allow_nan=False, separators=(',', ':')).encode('utf-8')
 
 
 def _parse_cookies(value: str) -> dict[str, str]:
@@ -104,6 +106,7 @@ class JobManager:
         self.process: subprocess.Popen[bytes] | None = None
         self.job_id: int | None = None
         self._threads: list[threading.Thread] = []
+        self.stopping = False
 
     def _active(self) -> dict[str, Any] | None:
         with control_db.connect(self.paths.db) as db:
@@ -155,6 +158,10 @@ class JobManager:
 
     def start(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         with self.lock:
+            if self.stopping:
+                raise HTTPError(503, 'Das Paket wird gestoppt. Keine neuen Aufträge.')
+            if self.process is not None:
+                raise HTTPError(409, 'Der vorherige Worker wird noch beendet. Bitte kurz warten.')
             active = self._active()
             if active is not None:
                 raise HTTPError(409, f'Es läuft bereits ein Auftrag (ID {active["id"]}).')
@@ -168,6 +175,8 @@ class JobManager:
                 pass
             command = self._worker_command() + [str(job_id)]
             env = self._worker_env()
+            token = new_token()
+            env['OFDL_RUN_TOKEN'] = token
             popen_kwargs: dict[str, Any] = {
                 'cwd': str(self.paths.pkgdest),
                 'env': env,
@@ -177,16 +186,28 @@ class JobManager:
             }
             if os.name == 'posix':
                 popen_kwargs['start_new_session'] = True
+            process = None
             try:
                 with open(log_path, 'ab', buffering=0) as log_stream:
                     popen_kwargs['stderr'] = log_stream
                     process = subprocess.Popen(command, **popen_kwargs)
+                register_worker(self.paths.pkgvar, process.pid, token)
                 with control_db.connect(self.paths.db) as db:
                     control_db.update_job(db, job_id, status='running', pid=process.pid,
                                           started_at=control_db.now_iso(),
                                           error=None)
                     job = control_db.get_job(db, job_id)
             except Exception as exc:
+                # Registration/DB can fail after spawn (e.g. full disk). Never
+                # leave an untracked worker running behind a "failed" job.
+                if process is not None:
+                    self._signal(process, signal.SIGTERM)
+                    try:
+                        process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        self._signal(process, getattr(signal, 'SIGKILL', 9))
+                        with suppress(subprocess.TimeoutExpired):
+                            process.wait(timeout=2)
                 with control_db.connect(self.paths.db) as db:
                     control_db.update_job(db, job_id, status='failed',
                                           error=f'Worker konnte nicht gestartet werden ({type(exc).__name__}).',
@@ -206,7 +227,17 @@ class JobManager:
     def _monitor(self, process: subprocess.Popen[bytes], job_id: int) -> None:
         returncode = process.wait()
         with self.lock:
+            self._finish_process(process, job_id, returncode)
+
+    def _finish_process(self, process: subprocess.Popen[bytes], job_id: int, returncode: int) -> None:
+        # Keep completion metadata and session verification serialized with new
+        # jobs/session imports; an old session test must not verify a new import.
+        with self.lock:
             if self.process is process:
+                # Clean descendants even when the worker leader exited first.
+                if signal_worker(self.paths.pkgvar, signal.SIGTERM, process.pid):
+                    time.sleep(0.3)
+                    signal_worker(self.paths.pkgvar, getattr(signal, 'SIGKILL', 9), process.pid)
                 self.process = None
                 self.job_id = None
         try:
@@ -254,13 +285,23 @@ class JobManager:
             if process.poll() is not None:
                 return
             time.sleep(0.2)
-        with suppress(Exception):
-            process.terminate()
+        self._signal(process, signal.SIGTERM)
         try:
             process.wait(timeout=5)
         except subprocess.TimeoutExpired:
+            self._signal(process, getattr(signal, 'SIGKILL', 9))
+
+    def _signal(self, process: subprocess.Popen[bytes], sig: int) -> None:
+        if signal_worker(self.paths.pkgvar, sig, process.pid):
+            return
+        if process.poll() is None:
             with suppress(Exception):
-                process.kill()
+                if os.name == 'posix' and os.getpgid(process.pid) == process.pid:
+                    os.killpg(process.pid, sig)
+                elif sig == signal.SIGTERM:
+                    process.terminate()
+                else:
+                    process.kill()
 
     def pause(self, job_id: int, paused: bool) -> dict[str, Any]:
         with self.lock:
@@ -274,13 +315,14 @@ class JobManager:
             return {'ok': True}
 
     def shutdown(self) -> None:
+        self.stopping = True
         active = None
         with suppress(Exception):
             active = self._active()
         if active is not None:
             with suppress(Exception):
                 self.cancel(int(active['id']))
-        deadline = time.monotonic() + 12.0
+        deadline = time.monotonic() + 6.0
         while time.monotonic() < deadline:
             with self.lock:
                 process = self.process
@@ -290,13 +332,13 @@ class JobManager:
         with self.lock:
             process = self.process
         if process is not None and process.poll() is None:
-            with suppress(Exception):
-                process.terminate()
+            self._signal(process, signal.SIGTERM)
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                with suppress(Exception):
-                    process.kill()
+                self._signal(process, getattr(signal, 'SIGKILL', 9))
+                with suppress(subprocess.TimeoutExpired):
+                    process.wait(timeout=2)
 
 
 class Scheduler(threading.Thread):
@@ -318,6 +360,25 @@ class Scheduler(threading.Thread):
     def tick(self) -> None:
         with self.state.job_manager.lock:
             self._tick()
+            self._tick_renewals()
+
+    def _tick_renewals(self) -> None:
+        with control_db.connect(self.state.paths.db) as db:
+            settings = control_db.get_json(db, 'free_renewal', {})
+            last = control_db.get_setting(db, 'free_renewal_last_run', '')
+        if not settings.get('enabled') or self.state.job_manager._active():
+            return
+        credentials = self.state.session_store.load()
+        if credentials is None or settings.get('account_id') != credentials.user_id:
+            return
+        now = datetime.now()
+        today = now.date().isoformat()
+        if last == today or now.strftime('%H:%M') < str(settings.get('time', '04:00')):
+            return
+        payload = {**normalize_renewal(settings, require_confirmation=False), 'account_id': credentials.user_id}
+        self.state.job_manager.start('free_renew', payload)
+        with control_db.connect(self.state.paths.db) as db:
+            control_db.set_setting(db, 'free_renewal_last_run', today)
 
     def _tick(self) -> None:
         paths = self.state.paths
@@ -425,6 +486,7 @@ class AppState:
             last_run = control_db.get_setting(db, 'schedule_last_run', '')
             confirmed = control_db.get_setting(db, 'library_confirmed', '') == '1'
             output_dir = control_db.get_setting(db, 'output_dir', '') if confirmed else ''
+            renewal = control_db.get_json(db, 'free_renewal', {'enabled': False, 'profiles': [], 'time': '04:00'})
         share = resolve_share_root(self.paths)
         share_default = default_output_dir(self.paths)
         return {
@@ -443,6 +505,7 @@ class AppState:
             'version': SERVICE_VERSION,
             'package_version': PACKAGE_VERSION,
             'categories': list(CATEGORIES),
+            'free_renewal': renewal,
         }
 
     # -- sessions ---------------------------------------------------------
@@ -574,8 +637,10 @@ class AppState:
 
     # -- lifecycle --------------------------------------------------------
     def close(self) -> None:
+        self.job_manager.stopping = True
         if self.scheduler is not None:
             self.scheduler.stop()
+            self.scheduler.join(timeout=2)
         self.job_manager.shutdown()
 
 
@@ -818,6 +883,9 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     # -- GET --------------------------------------------------------------
     def _route_get(self, path: str, query: dict[str, list[str]]) -> None:
+        if path == '/api/locale':
+            self.send_json(200, {'language': dsm_language(), 'source': 'dsm-system'})
+            return
         if path == '/api/health':
             self.send_json(200, {
                 'ok': True,
@@ -867,7 +935,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 row = control_db.get_job(db, job_id)
                 if row is None:
                     raise HTTPError(404, 'Auftrag nicht gefunden.')
-                events = control_db.list_events(db, job_id, after=after, limit=200)
+                events = (control_db.recent_events(db, job_id) if (query.get('tail') or [''])[0] == '1'
+                          else control_db.list_events(db, job_id, after=after, limit=200))
             self.send_json(200, {
                 'job': public_job(row),
                 'events': events,
@@ -877,6 +946,21 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path == '/api/settings':
             self.require_auth()
             self.send_json(200, self.state.public_settings())
+            return
+        if path == '/api/offers':
+            self.require_auth()
+            credentials = self.state.session_store.load()
+            account = credentials.user_id if credentials else ''
+            try:
+                page = max(1, int((query.get('page') or ['1'])[0]))
+            except ValueError:
+                raise HTTPError(400, 'Ungültige Seitennummer.') from None
+            with control_db.connect(self.state.paths.db) as db:
+                total = db.execute('SELECT COUNT(*) FROM offers WHERE account_id=?', (account,)).fetchone()[0]
+                rows = db.execute('SELECT username,kind,status,detail,scanned_at FROM offers WHERE account_id=? '
+                                  'ORDER BY username LIMIT 50 OFFSET ?', (account, (page - 1) * 50)).fetchall()
+            self.send_json(200, {'items': [dict(row) for row in rows], 'page': page,
+                                 'pages': max(1, (total + 49) // 50), 'total': total})
             return
         if path == '/api/folders':
             self.require_auth()
@@ -997,6 +1081,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             'recent_jobs': [public_job(row) for row in recent],
             'schedule': schedule,
             'schedule_last_run': last_run,
+            'nas_time': datetime.now().astimezone().isoformat(),
             'output_dir': str(output) if output else '',
             'share': {
                 'name': share.name if share else DEFAULT_SHARE_NAME,
@@ -1010,6 +1095,17 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     # -- POST -------------------------------------------------------------
     def _route_post(self, path: str, query: dict[str, list[str]]) -> None:
+        if path in {'/api/session/import', '/api/session/clear'}:
+            session = self.require_auth()
+            self.require_csrf(session[1])
+            with self.state.job_manager.lock:
+                if self.state.job_manager._active():
+                    raise HTTPError(409, 'Sitzung während eines Auftrags nicht ändern. Erst Auftrag beenden.')
+                self._route_post_unlocked(path, query)
+            return
+        self._route_post_unlocked(path, query)
+
+    def _route_post_unlocked(self, path: str, query: dict[str, list[str]]) -> None:
         if path == '/api/login':
             self._login()
             return
@@ -1042,6 +1138,11 @@ class RequestHandler(BaseHTTPRequestHandler):
                 raise HTTPError(400, self._safe_session_error(exc)) from None
             self.state.session_store.save(credentials)
             with control_db.connect(self.state.paths.db) as db:
+                previous_account = control_db.get_setting(db, 'session_user_id', '')
+                if previous_account != credentials.user_id:
+                    control_db.set_json(db, 'free_renewal', {'enabled': False, 'profiles': [], 'time': '04:00'})
+                    db.execute('DELETE FROM offers')
+                    db.commit()
                 control_db.set_setting(db, 'session_user_id', credentials.user_id)
                 control_db.set_setting(db, 'session_verified', '0')
             self.send_json(200, {'ok': True, 'user_id': credentials.user_id})
@@ -1050,6 +1151,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             session = self.require_auth()
             self.require_csrf(session[1])
             self.state.session_store.clear()
+            if self.state.paths.session_file.exists():
+                raise HTTPError(500, 'Sitzung konnte nicht gelöscht werden. Berechtigungen prüfen.')
             with control_db.connect(self.state.paths.db) as db:
                 control_db.set_setting(db, 'session_user_id', '')
                 control_db.set_setting(db, 'session_verified', '0')
@@ -1112,7 +1215,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         if path == '/api/session':
             session = self.require_auth()
             self.require_csrf(session[1])
-            self.state.session_store.clear()
+            with self.state.job_manager.lock:
+                if self.state.job_manager._active():
+                    raise HTTPError(409, 'Sitzung während eines Auftrags nicht ändern. Erst Auftrag beenden.')
+                self.state.session_store.clear()
+                if self.state.paths.session_file.exists():
+                    raise HTTPError(500, 'Sitzung konnte nicht gelöscht werden. Berechtigungen prüfen.')
             with control_db.connect(self.state.paths.db) as db:
                 control_db.set_setting(db, 'session_user_id', '')
                 control_db.set_setting(db, 'session_verified', '0')
@@ -1210,10 +1318,23 @@ class RequestHandler(BaseHTTPRequestHandler):
                 pending['download_defaults'] = normalize_schedule_options(body.get('download_defaults'))
             except AppError as exc:
                 raise HTTPError(400, str(exc)) from None
+        if 'free_renewal' in body:
+            value = body['free_renewal']
+            if isinstance(value, dict) and value.get('enabled') is False:
+                pending['free_renewal'] = {'enabled': False, 'profiles': [], 'time': '04:00'}
+            else:
+                try:
+                    renewal = normalize_renewal(value)
+                except AppError as exc:
+                    raise HTTPError(400, str(exc)) from None
+                credentials = self.state.session_store.load()
+                if credentials is None:
+                    raise HTTPError(409, 'Bitte zuerst eine Sitzung importieren.')
+                pending['free_renewal'] = {**renewal, 'account_id': credentials.user_id}
 
         with control_db.connect(paths.db) as db:
             for key, value in pending.items():
-                if key in {'schedule', 'download_defaults'}:
+                if key in {'schedule', 'download_defaults', 'free_renewal'}:
                     control_db.set_json(db, key, value)
                 else:
                     control_db.set_setting(db, key, str(value))
@@ -1227,7 +1348,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         paths = self.state.paths
         body = self.read_json() if kind_override is None else {}
         kind = kind_override or str(body.get('kind') or '')
-        if kind not in {'test_session', 'subscriptions', 'download', 'preview'}:
+        if kind not in {'test_session', 'subscriptions', 'download', 'preview', 'offers_scan', 'free_renew'}:
             raise HTTPError(400, 'Unbekannter Auftragstyp.')
         options = options_override if options_override is not None else (body.get('options') or {})
         if not isinstance(options, dict):
@@ -1240,7 +1361,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             if requested and Path(str(requested)).resolve() != configured:
                 raise HTTPError(409, 'Der Auftrag muss den gespeicherten Bibliothekspfad verwenden.')
             options = {**options, 'output_dir': str(configured)}
-        if kind in {'test_session', 'subscriptions', 'download'} and self.state.session_store.load() is None:
+        if kind != 'preview' and self.state.session_store.load() is None:
             raise HTTPError(409, 'Es ist keine Sitzung eingerichtet. Bitte zuerst eine Sitzung importieren.')
         payload: dict[str, Any]
         if kind == 'download':
@@ -1256,6 +1377,20 @@ class RequestHandler(BaseHTTPRequestHandler):
                 payload = normalize_preview(options, paths)
             except AppError as exc:
                 raise HTTPError(400, str(exc)) from None
+        elif kind == 'offers_scan':
+            try:
+                profiles = parse_profiles(options.get('profiles'))
+                if len(profiles) > 200:
+                    raise AppError('Maximal 200 zusätzliche Profile.')
+                payload = {'profiles': profiles}
+            except AppError as exc:
+                raise HTTPError(400, str(exc)) from None
+        elif kind == 'free_renew':
+            try:
+                payload = normalize_renewal(options)
+            except AppError as exc:
+                raise HTTPError(400, str(exc)) from None
+            payload['account_id'] = self.state.session_store.load().user_id
         else:
             payload = {'rules_source': str(options.get('rules_source') or '')[:2048]}
         try:
@@ -1268,8 +1403,8 @@ class RequestHandler(BaseHTTPRequestHandler):
 def create_server(paths: Paths, host: str = '127.0.0.1', port: int = 0,
                   *, start_scheduler: bool = True) -> tuple[BoundedThreadingHTTPServer, AppState]:
     state = AppState(paths, start_scheduler=start_scheduler)
-    RequestHandler.state = state
-    server = BoundedThreadingHTTPServer((host, port), RequestHandler, state)
+    handler = type('BoundRequestHandler', (RequestHandler,), {'state': state})
+    server = BoundedThreadingHTTPServer((host, port), handler, state)
     return server, state
 
 

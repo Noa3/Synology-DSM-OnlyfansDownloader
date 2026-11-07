@@ -50,7 +50,7 @@ def _client(paths: Paths, control: Control, emit: EventSink, payload: dict[str, 
     proxy = _proxy(paths)
     rules = load_rules(_rules_source(paths, payload), control,
                        cache_dir=paths.config / 'rules', emit=emit, proxy=proxy)
-    return ApiClient(credentials, rules, control, emit=emit, proxy=proxy)
+    return ApiClient(credentials, rules, control, emit=emit, proxy=proxy, retry_floor=180)
 
 
 def run_test_session(paths: Paths, payload: dict[str, Any], control: Control,
@@ -75,7 +75,14 @@ def run_subscriptions(paths: Paths, payload: dict[str, Any], control: Control,
     batch: list[tuple[str, str, str]] = []
     with _client(paths, control, emit, payload) as client:
         with control_db.connect(paths.db) as db:
-            control_db.clear_creators(db)
+            # Keep the old list usable if authentication/network fails mid-scan.
+            db.execute('CREATE TEMP TABLE incoming_creators(username TEXT PRIMARY KEY, display_name TEXT, '
+                       'subscription TEXT, scanned_at TEXT)')
+            def store_batch() -> None:
+                db.executemany('INSERT OR REPLACE INTO incoming_creators VALUES(?,?,?,?)',
+                               [(name, display, status, control_db.now_iso()) for name, display, status in batch])
+                db.commit()
+                batch.clear()
             for row in client.paginate('/subscriptions/subscribes', 'subscriptions'):
                 control.checkpoint()
                 if not isinstance(row, dict):
@@ -94,13 +101,17 @@ def run_subscriptions(paths: Paths, payload: dict[str, Any], control: Control,
                 batch.append((name, display, 'active'))
                 count += 1
                 if len(batch) >= 100:
-                    control_db.upsert_creators(db, batch)
-                    batch.clear()
+                    store_batch()
                     emit('overall', {'done': count, 'total': 0, 'scanning': True})
                 if count > 50000:
                     raise AppError('Die Abonnementliste ist unerwartet groß; der Vorgang wurde begrenzt.')
             if batch:
-                control_db.upsert_creators(db, batch)
+                store_batch()
+            control.checkpoint()
+            db.execute('DELETE FROM creators')
+            db.execute('INSERT INTO creators SELECT * FROM incoming_creators')
+            count = db.execute('SELECT COUNT(*) FROM creators').fetchone()[0]
+            db.commit()
     return {'creators': count, 'message': f'{count} Abonnements gespeichert.'}
 
 
@@ -189,4 +200,7 @@ def run_job(paths: Paths, kind: str, payload: dict[str, Any], control: Control,
         return run_download(paths, payload, control, emit)
     if kind == 'preview':
         return run_preview(paths, payload, control, emit)
+    if kind in {'offers_scan', 'free_renew'}:
+        from .renewals import run_free_renew, run_offers_scan
+        return (run_offers_scan if kind == 'offers_scan' else run_free_renew)(paths, payload, control, emit)
     raise AppError('Unbekannter Auftragstyp.')

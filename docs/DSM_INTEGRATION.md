@@ -1,6 +1,6 @@
 # DSM desktop window and session import
 
-## Current release: 2.8.0-4
+## Current release: 2.8.0-5
 
 The package still opens its standalone web UI. It does not claim to be a
 File Station-style DSM desktop application. App login remains separate from DSM.
@@ -19,7 +19,7 @@ Changing that flag alone is not a secure implementation:
 - Disabling browser security, allowing arbitrary framing or using a remote
   credential-capturing proxy is not an acceptable workaround.
 
-No such proxy or speculative DSM configuration is shipped in 2.8.0-4. The
+No such proxy or speculative DSM configuration is shipped in 2.8.0-5. The
 control service and one-worker memory model are retained.
 
 References:
@@ -58,7 +58,7 @@ browser-profile secrets and maintenance, contrary to the small-runtime goal.
 
 ## Storage consent and old folders
 
-2.8.0-4 creates no shared folders and uses no library until the user explicitly
+2.8.0-5 creates no shared folders and uses no library until the user explicitly
 saves an existing path. Older automatically created shares are **not deleted**.
 Synology's data-share worker specifies `Release(): Does nothing` to preserve
 personal data: [official documentation](https://help.synology.com/developer-guide/resource_acquisition/data_share.html).

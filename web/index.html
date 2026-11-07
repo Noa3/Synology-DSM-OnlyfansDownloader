@@ -37,10 +37,13 @@
     <button class="tab" type="button" role="tab" data-tab="downloads" aria-selected="false">Downloads</button>
     <button class="tab" type="button" role="tab" data-tab="session" aria-selected="false">Sitzung</button>
     <button class="tab" type="button" role="tab" data-tab="library" aria-selected="false">Bibliothek</button>
+    <button class="tab" type="button" role="tab" data-tab="offers" aria-selected="false">Free & Trials</button>
     <button class="tab" type="button" role="tab" data-tab="settings" aria-selected="false">Einstellungen</button>
   </nav>
 
   <main class="content">
+    <div id="connection-banner" class="notice" role="status" hidden></div>
+    <div class="workspace-heading"><div><p class="eyebrow">NAS WORKSPACE</p><h1 id="page-heading">Übersicht</h1></div><span id="last-sync" class="muted"></span></div>
     <article id="storage-setup" class="card" hidden>
       <h2>Bibliotheksordner auswählen</h2>
       <p>Bitte zuerst unter Einstellungen einen vorhandenen Ordner auswählen und speichern. Es werden keine Freigaben automatisch angelegt.</p>
@@ -57,9 +60,16 @@
           <div id="job-active" hidden>
             <h3 id="job-title">Auftrag</h3>
             <p id="job-phase" class="muted">Wird vorbereitet …</p>
-            <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+            <p id="job-error" class="error" role="alert" hidden></p>
+            <div id="job-progress" class="progress" role="progressbar" aria-label="Gesamtfortschritt" aria-valuemin="0" aria-valuemax="100">
               <div id="job-progress-bar" class="progress-bar"></div>
             </div>
+            <div id="file-progress-section" hidden>
+              <p id="file-name" class="path"></p>
+              <div id="file-progress" class="progress file-progress" role="progressbar" aria-label="Aktuelle Datei" aria-valuemin="0" aria-valuemax="100"><div id="file-progress-bar" class="progress-bar"></div></div>
+              <span id="file-progress-text" class="hint"></span>
+            </div>
+            <p id="job-timing" class="hint"></p>
             <div class="progress-row">
               <span id="job-progress-text">0 / 0</span>
               <span id="job-speed" class="muted"></span>
@@ -102,6 +112,27 @@
             <tbody id="recent-jobs"><tr><td colspan="5" class="muted">Noch keine Aufträge.</td></tr></tbody>
           </table>
         </div>
+      </article>
+    </section>
+
+    <section id="tab-offers" class="tab-panel" role="tabpanel" aria-label="Free & Trials" hidden>
+      <article class="card">
+        <div class="card-head"><h2>Free & Trials</h2><span class="pill">Opt-in</span></div>
+        <p>Abgelaufene und aktive Abonnements sowie ausdrücklich angegebene Profile nach kostenlosen Angeboten durchsuchen.</p>
+        <label for="renewal-profiles">Erlaubte kostenlose Profile (Namen oder URLs)</label>
+        <textarea id="renewal-profiles" rows="3" placeholder="creator1, creator2" spellcheck="false"></textarea>
+        <div class="button-row"><button id="scan-offers" class="ghost" type="button">Angebote suchen</button><button id="renew-free" class="primary" type="button">Kostenlose Profile jetzt prüfen und anmelden</button></div>
+        <p class="notice">Trials können später kostenpflichtig verlängert werden. Keine automatische Trial-Annahme und kein Einschalten kostenpflichtiger Verlängerungen. Trial-Angebote bitte auf OnlyFans prüfen.</p>
+        <label class="check-row"><input id="renewal-consent" type="checkbox"><span>Ich erlaube Anmeldungen nur für die oben ausgewählten, erneut als dauerhaft kostenlos geprüften Profile. Preisänderungen zwischen Prüfung und Serverantwort können nicht vollständig ausgeschlossen werden.</span></label>
+        <label class="check-row"><input id="renewal-enabled" type="checkbox"><span>Täglich automatisch prüfen und kostenlos erneut anmelden</span></label>
+        <div class="field-row"><label for="renewal-time">Uhrzeit (NAS-Zeit)</label><input id="renewal-time" type="time" value="04:00"><button id="save-renewal" type="button">Automatik speichern</button></div>
+        <p id="renewal-summary" class="hint"></p>
+      </article>
+      <article class="card">
+        <div class="card-head"><h2>Gefundene Angebote</h2><button id="refresh-offers" class="ghost" type="button">Aktualisieren</button></div>
+        <div class="table-wrap"><table><thead><tr><th>Creator</th><th>Typ</th><th>Status</th><th>Details</th><th>Website</th></tr></thead><tbody id="offers-list"></tbody></table></div>
+        <div class="button-row"><button id="offers-prev" type="button">Zurück</button><span id="offers-page" class="hint"></span><button id="offers-next" type="button">Weiter</button></div>
+        <p class="hint">Scan ist nur lesend. Automatische Anmeldungen nur für die gespeicherte Freigabeliste, maximal ein Versuch pro Profil und Tag. Nach Kontowechsel wird die Automatik deaktiviert.</p>
       </article>
     </section>
 
@@ -197,6 +228,7 @@
             <div><dt>Ablage</dt><dd class="path">/var/packages/OnlyFansDL/var/data/session.json (0600)</dd></div>
           </dl>
           <p class="hint">Die Sitzung wird nur auf dem NAS gespeichert. Sie wird nie an Dritte gesendet und nicht in Einstellungen oder Protokollen abgelegt.</p>
+          <p class="hint">Die Sitzung bleibt nach Neuladen, Paketneustart und Update gespeichert. OnlyFans kann sie jederzeit ablaufen lassen.</p>
           <div class="button-row">
             <button id="test-session" class="primary" type="button">Sitzung testen</button>
             <button id="clear-session" class="danger" type="button">Sitzung löschen</button>
@@ -318,6 +350,8 @@
           <div><dt>Speicherziel</dt><dd>≤ 50 MiB PSS im Leerlauf (auf DS723+ zu messen)</dd></div>
         </dl>
         <p class="hint">Desktop-App und CLI bleiben im Paket enthalten. Diese Oberfläche ist eine statische Browseroberfläche; sie lädt keine externen Schriftarten, Skripte oder Bilder.</p>
+        <p class="hint">Updates werden nicht automatisch von GitHub installiert. Neue SPK aus Releases laden und in DSM über Manuell installieren aktualisieren. Sitzung und Einstellungen bleiben beim Upgrade erhalten.</p>
+        <a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/releases" target="_blank" rel="noopener noreferrer">GitHub Releases öffnen</a>
       </article>
     </section>
   </main>
@@ -341,6 +375,7 @@
 
   <div id="toast" class="toast" role="status" hidden></div>
   <script src="/static/languages.js" defer></script>
+  <script src="/static/locale-catalogs.js" defer></script>
   <script src="/static/i18n.js" defer></script>
   <script src="/static/app.js" defer></script>
 </body>

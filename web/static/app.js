@@ -13,6 +13,7 @@
   const KIND_TEXT = {
     test_session: 'Sitzungstest', subscriptions: 'Abonnements',
     download: 'Download', preview: 'Vorschau',
+    offers_scan: 'Angebote suchen', free_renew: 'Kostenlose Wiederanmeldung',
   };
 
   const state = {
@@ -34,6 +35,15 @@
     folderRoot: '',
     polling: false,
     settingsLoaded: false,
+    displayJobId: null,
+    eventsInitial: true,
+    lastSync: 0,
+    failures: 0,
+    authExpired: false,
+    offersPage: 1,
+    needsJobPoll: false,
+    creatorRequest: 0,
+    folderRequest: 0,
   };
 
   /* ------------------------------------------------------------------ */
@@ -120,25 +130,37 @@
   }
 
   async function api(path, options = {}) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
     const init = {
+      ...options,
       credentials: 'same-origin',
       headers: { Accept: 'application/json', ...(options.headers || {}) },
-      ...options,
+      signal: controller.signal,
+      cache: 'no-store',
     };
     if (state.csrf) init.headers['X-CSRF-Token'] = state.csrf;
     if (init.body && typeof init.body !== 'string') {
       init.headers['Content-Type'] = 'application/json';
       init.body = JSON.stringify(init.body);
     }
-    const response = await fetch(path, init);
+    let response;
     let data = null;
+    try {
+      response = await fetch(path, init);
+      const text = await response.text();
+      try { data = JSON.parse(text); } catch (_) { /* Report malformed responses below. */ }
+    } finally { clearTimeout(timer); }
     const type = response.headers.get('Content-Type') || '';
     if (type.includes('application/json')) {
-      try { data = await response.json(); } catch (_) { data = null; }
+      // Already decoded under the same timeout as the request.
     }
     if (response.status === 401) {
       window.location.replace('/login');
-      throw new Error('Anmeldung erforderlich.');
+      state.authExpired = true;
+      const error = new Error(t('Anmeldung abgelaufen. Bitte erneut anmelden.'));
+      error.status = 401;
+      throw error;
     }
     if (!response.ok) {
       const message = (data && data.error) || `HTTP ${response.status}`;
@@ -147,7 +169,12 @@
       error.data = data;
       throw error;
     }
-    return data || {};
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      const error = new Error(t('Ungültige Serverantwort. Erneuter Versuch folgt.'));
+      error.status = response.status;
+      throw error;
+    }
+    return data;
   }
 
   /* ------------------------------------------------------------------ */
@@ -165,6 +192,9 @@
       panel.classList.toggle('active', active);
       panel.hidden = !active;
     });
+    const tab = document.querySelector(`.tab[data-tab="${name}"]`);
+    if (tab) $('page-heading').textContent = tab.textContent;
+    if (name === 'offers' && state.csrf) loadOffers(state.offersPage).catch((error) => toast(error.message, 'bad'));
   }
 
   function wireTabs() {
@@ -194,7 +224,9 @@
     $('fact-uptime').textContent = formatDuration(status.uptime_seconds);
     const memory = status.memory || {};
     const worker = memory.worker || {};
-    let memoryText = `${formatBytes((memory.pss_kb || 0) * 1024)} PSS / ${formatBytes((memory.rss_kb || 0) * 1024)} RSS`;
+    let memoryText = memory.rss_kb > 0
+      ? `${memory.pss_kb > 0 ? formatBytes(memory.pss_kb * 1024) : '–'} PSS / ${formatBytes(memory.rss_kb * 1024)} RSS`
+      : t('Nicht verfügbar');
     if (worker.rss_kb) {
       memoryText += ` · Worker ${formatBytes((worker.pss_kb || 0) * 1024)} PSS`;
     }
@@ -217,6 +249,11 @@
     updateLibrary(status.library || {});
     updateScheduleLabels(status);
     renderRecentJobs(status.recent_jobs || []);
+    const active = Boolean(status.active_job);
+    for (const id of ['start-download', 'start-scan', 'load-subscriptions', 'test-session',
+                      'scan-offers', 'renew-free', 'import-session', 'clear-session', 'save-library']) {
+      $(id).disabled = active;
+    }
   }
 
   function updateLibrary(library) {
@@ -300,6 +337,7 @@
   function clearEvents() {
     state.lastEventId = 0;
     state.finishedJobId = null;
+    state.eventsInitial = true;
     const list = $('event-list');
     list.replaceChildren();
     const item = document.createElement('li');
@@ -316,6 +354,7 @@
     if (placeholder && list.children.length === 1) list.replaceChildren();
     const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
     for (const event of events) {
+      if (Number(event.id) <= state.lastEventId) continue;
       state.lastEventId = Math.max(state.lastEventId, Number(event.id || 0));
       const item = document.createElement('li');
       item.className = event.level === 'media' ? 'media' : event.level;
@@ -365,32 +404,75 @@
     active.hidden = false;
     $('job-status').textContent = t(STATUS_TEXT[job.status] || job.status);
     $('job-status').className = `pill ${statusClass(job.status)}`;
+    if (job.status === 'completed' && Number(job.result?.errors) > 0) {
+      $('job-status').textContent = t('Beendet mit Fehlern');
+      $('job-status').className = 'pill warn';
+    }
     $('job-title').textContent = `#${job.id} · ${t(KIND_TEXT[job.kind] || job.kind)}`;
     $('job-phase').textContent = job.phase || (ACTIVE.has(job.status) ? t('Wird vorbereitet …') : jobSummary(job));
+    $('job-error').hidden = !job.error;
+    $('job-error').textContent = job.error || '';
 
     const stats = job.stats || {};
-    let done = Number(job.progress_done || stats.overall_done || 0);
-    let total = Number(job.progress_total || stats.overall_total || 0);
+    const number = (value) => Number.isFinite(Number(value)) ? Math.max(0, Number(value)) : 0;
+    const done = number(job.progress_done ?? stats.overall_done);
+    const total = number(job.progress_total ?? stats.overall_total);
+    const running = ACTIVE.has(job.status);
+    const scanning = job.kind === 'download' && stats.scanning !== false;
+    const knownTotal = total > 0 && !scanning;
     let bar = 0;
     let progressText = '';
-    if (total > 0) {
+    if (job.status === 'completed') {
+      bar = 100;
+      progressText = t(job.request?.dry_run ? 'Scan abgeschlossen. Keine Medien heruntergeladen.' : 'Auftrag abgeschlossen.');
+    } else if (knownTotal) {
       bar = Math.max(0, Math.min(100, (done / total) * 100));
-      progressText = t('{done} / {total} Dateien', {
+      progressText = t(job.kind === 'download' ? '{done} / {total} Dateien verarbeitet' : '{done} / {total} Schritte', {
         done: done.toLocaleString(locale()), total: total.toLocaleString(locale()),
       });
-    } else if (Number(stats.current_total) > 0) {
-      const current = Number(stats.current_done || 0);
-      const currentTotal = Number(stats.current_total || 0);
-      bar = Math.max(0, Math.min(100, (current / currentTotal) * 100));
-      progressText = `${formatBytes(current)} / ${formatBytes(currentTotal)}`;
     } else {
-      progressText = ACTIVE.has(job.status) ? t('Ermittlung läuft …') : t('Keine Fortschrittsdaten');
+      progressText = running
+        ? (job.kind === 'download'
+          ? t('Suche läuft · {done} verarbeitet · bisher {total} gefunden', { done, total })
+          : t('Auftrag läuft. Gesamtumfang noch unbekannt.'))
+        : t(STATUS_TEXT[job.status] || job.status);
     }
+    const progress = $('job-progress');
+    progress.classList.toggle('indeterminate', running && !knownTotal);
+    progress.classList.toggle('paused', job.pause_requested || job.status === 'paused');
+    progress.classList.toggle('failed', job.status === 'failed');
+    progress.setAttribute('aria-valuetext', progressText);
+    if (knownTotal || job.status === 'completed') progress.setAttribute('aria-valuenow', String(Math.round(bar)));
+    else progress.removeAttribute('aria-valuenow');
     $('job-progress-bar').style.width = `${bar}%`;
     $('job-progress-text').textContent = progressText;
-    $('job-speed').textContent = stats.current_speed
-      ? `${formatBytes(stats.current_speed)}/s · ${stats.current_file || ''}`
-      : '';
+    const currentTotal = number(stats.current_total);
+    const current = number(stats.current_done);
+    const speed = number(stats.current_speed);
+    $('file-progress-section').hidden = !running || !stats.current_file;
+    $('file-name').textContent = stats.current_file || '';
+    $('file-progress').classList.toggle('indeterminate', currentTotal <= 0);
+    const filePercent = currentTotal > 0 ? Math.min(100, 100 * current / currentTotal) : 0;
+    $('file-progress-bar').style.width = `${filePercent}%`;
+    if (currentTotal > 0) $('file-progress').setAttribute('aria-valuenow', String(Math.round(filePercent)));
+    else $('file-progress').removeAttribute('aria-valuenow');
+    $('file-progress-text').textContent = currentTotal > 0 ? `${formatBytes(current)} / ${formatBytes(currentTotal)}` : formatBytes(current);
+    $('job-speed').textContent = running && speed > 0 ? `${formatBytes(speed)}/s` : '';
+    const end = job.finished_at ? Date.parse(job.finished_at) : Date.now();
+    const started = Date.parse(job.started_at || job.created_at);
+    $('job-timing').textContent = Number.isFinite(started)
+      ? `${t('Laufzeit')}: ${formatDuration((end - started) / 1000)}` : '';
+    if (job.cancel_requested && running) $('job-phase').textContent = t('Abbruch angefordert. Worker wird beendet …');
+    else if (job.pause_requested && running) $('job-phase').textContent = t('Pause angefordert. Warte auf sicheren Haltepunkt …');
+    else if (running && stats.retry_at) {
+      const seconds = Math.max(0, Math.ceil((Date.parse(stats.retry_at) - Date.now()) / 1000));
+      $('job-phase').textContent = t('Temporärer API-/Netzwerkfehler. Neuer Leseversuch in {seconds} s. Abbruch bleibt möglich.', { seconds });
+    } else if (running) {
+      const activity = Date.parse(stats.last_activity_at || job.started_at || job.created_at);
+      if (Number.isFinite(activity) && Date.now() - activity > 90000) {
+        $('job-phase').textContent = t('Länger keine Fortschrittsmeldung. Warte auf Server oder Netzwerk; Sitzung und Verbindung prüfen.');
+      }
+    }
 
     const grid = $('job-stats');
     grid.replaceChildren();
@@ -405,6 +487,11 @@
       ['Streaming', stats.streaming || 0],
       [t('Übertragen'), stats.transferred_bytes ? formatBytes(stats.transferred_bytes) : '0 B'],
     ];
+    if (job.kind === 'free_renew') items.splice(0, items.length,
+      [t('Angemeldet'), stats.subscribed || job.result?.subscribed || 0],
+      [t('Übersprungen'), stats.skipped || job.result?.skipped || 0],
+      [t('Fehler'), stats.errors || job.result?.errors || 0]);
+    if (!['download', 'free_renew'].includes(job.kind)) items.length = 0;
     for (const [label, value] of items) {
       const box = document.createElement('div');
       box.className = 'stat';
@@ -421,7 +508,8 @@
     const finished = !ACTIVE.has(job.status);
     pause.disabled = finished;
     cancel.disabled = finished;
-    pause.textContent = job.status === 'paused' ? t('Fortsetzen') : t('Pause');
+    pause.textContent = job.pause_requested || job.status === 'paused' ? t('Fortsetzen') : t('Pause');
+    cancel.disabled = finished || Boolean(job.cancel_requested);
   }
 
   function handleJobFinished(job) {
@@ -437,13 +525,16 @@
       box.textContent = job.status === 'completed'
         ? (t(result.message || 'Sitzung akzeptiert.') + (result.username ? ` (@${result.username})` : ''))
         : t(job.error || 'Sitzungstest fehlgeschlagen.');
-      loadStatus().catch(() => {});
     } else if (job.kind === 'preview') {
-      if (job.status === 'completed' && result.url) {
+      if (job.status === 'completed' && result.url && state.previewRequested) {
         window.open(result.url, '_blank', 'noopener');
       } else {
         toast(t(result.message || job.error || 'Vorschau nicht verfügbar.'), job.status === 'completed' ? '' : 'bad');
       }
+      state.previewRequested = false;
+    } else if (['offers_scan', 'free_renew'].includes(job.kind)) {
+      loadOffers(1).catch(() => {});
+      toast(t(job.status === 'completed' ? 'Auftrag abgeschlossen.' : (job.error || 'Auftrag fehlgeschlagen.')), job.status === 'completed' ? 'ok' : 'bad');
     } else if (job.kind === 'download') {
       if (job.status === 'completed') {
         toast(t('Download fertig: {n} neu, {e} vorhanden.', {
@@ -455,20 +546,23 @@
         toast(t(job.error || 'Download fehlgeschlagen.'), 'bad');
       }
       $('library-output').textContent = state.status?.output_dir || '–';
-      loadStatus().catch(() => {});
     }
   }
 
   async function pollJob() {
-    if (!state.activeJob) return;
-    const jobId = state.activeJob.id;
-    const data = await api(`/api/jobs/${jobId}?after=${state.lastEventId}`);
+    const selected = state.activeJob || state.lastJob;
+    if (!selected) return;
+    const jobId = selected.id;
+    const data = await api(`/api/jobs/${jobId}?after=${state.lastEventId}${state.eventsInitial ? '&tail=1' : ''}`);
+    if (!data.job || data.job.id !== jobId) throw new Error(t('Auftragsstatus konnte nicht aktualisiert werden.'));
+    state.eventsInitial = false;
     appendEvents(data.events || []);
     state.lastJob = data.job;
     updateJobCard(data.job);
     if (!ACTIVE.has(data.job.status)) {
       state.activeJob = null;
-      handleJobFinished(data.job);
+      // Reloading a finished job must not re-run completion side effects.
+      if (selected.status !== data.job.status || state.finishedJobId !== data.job.id) handleJobFinished(data.job);
     } else {
       state.activeJob = data.job;
     }
@@ -476,37 +570,56 @@
 
   async function loadStatus() {
     const status = await api('/api/status');
+    if (!Array.isArray(status.recent_jobs) || !status.version) throw new Error(t('Ungültige Serverantwort. Erneuter Versuch folgt.'));
     updateFacts(status);
-    const active = status.active_job;
-    if (active) {
-      if (!state.activeJob || state.activeJob.id !== active.id) {
-        state.lastEventId = 0;
-        state.finishedJobId = null;
-        clearEvents();
-      }
-      state.activeJob = active;
-      state.lastJob = active;
-      updateJobCard(active);
-    } else if (state.activeJob) {
-      // Poll once more so the final state and events are captured.
-      await pollJob();
-      state.activeJob = null;
-    } else if (state.lastJob) {
-      updateJobCard(state.lastJob);
-    } else {
-      updateJobCard(null);
+    const previous = state.lastJob;
+    const selected = status.active_job || status.recent_jobs[0] || null;
+    if (selected && state.displayJobId !== selected.id) {
+      state.displayJobId = selected.id;
+      clearEvents();
+      if (!status.active_job) state.finishedJobId = selected.id;
     }
+    state.activeJob = status.active_job || null;
+    state.lastJob = selected;
+    updateJobCard(selected);
+    if (previous && selected && previous.id === selected.id
+        && ACTIVE.has(previous.status) && !ACTIVE.has(selected.status)) {
+      state.needsJobPoll = true;
+      handleJobFinished(selected);
+    }
+  }
+
+  function connectionNotice(message = '') {
+    $('connection-banner').textContent = message;
+    $('connection-banner').hidden = !message;
   }
 
   async function poll() {
     if (state.polling) return;
     state.polling = true;
     try {
+      if (state.authExpired) return;
+      if (!state.csrf) state.csrf = (await api('/api/session')).csrf;
       await loadStatus();
-      if (state.activeJob) await pollJob();
+      state.failures = 0;
+      state.lastSync = Date.now();
+      $('last-sync').textContent = `${t('Aktualisiert')}: ${formatTime(new Date(state.lastSync).toISOString())}`;
+      connectionNotice();
+      if (!state.settingsLoaded) {
+        try { await loadSettings(); } catch (_) { connectionNotice(t('Dienst online. Einstellungen werden erneut geladen.')); }
+      }
+      if (state.activeJob || state.eventsInitial || state.needsJobPoll) {
+        try { await pollJob(); state.needsJobPoll = false; }
+        catch (error) {
+          if (error.status !== 401) connectionNotice(t('Dienst online. Auftragsereignisse werden erneut geladen.'));
+        }
+      }
     } catch (error) {
-      $('service-dot').className = 'dot bad';
-      $('service-label').textContent = t('Dienst nicht erreichbar');
+      if (error.status === 401) return;
+      state.failures += 1;
+      $('service-dot').className = state.failures > 2 ? 'dot bad' : 'dot';
+      $('service-label').textContent = t('Verbindung wird wiederhergestellt …');
+      connectionNotice(t('Statusaktualisierung fehlgeschlagen. Letzter Stand bleibt sichtbar; laufende Aufträge werden dadurch nicht gestoppt.'));
     } finally {
       state.polling = false;
     }
@@ -604,6 +717,12 @@
     state.settingsLoaded = true;
     updateCreatorSelection();
     loadCreators(1).catch(() => {});
+    const renewal = settings.free_renewal || {};
+    $('renewal-profiles').value = (renewal.profiles || []).join(', ');
+    $('renewal-enabled').checked = Boolean(renewal.enabled);
+    $('renewal-time').value = renewal.time || '04:00';
+    $('renewal-consent').checked = false;
+    $('renewal-summary').textContent = t(renewal.enabled ? 'Automatik aktiv – nur gespeicherte kostenlose Profile.' : 'Automatik deaktiviert.');
   }
 
   function applyLibraryPath(settings) {
@@ -642,9 +761,11 @@
   }
 
   async function loadCreators(page = 1) {
+    const requestId = ++state.creatorRequest;
     state.creatorQuery = $('creator-search').value.trim();
     const query = encodeURIComponent(state.creatorQuery);
     const data = await api(`/api/creators?page=${page}&q=${query}&per_page=50`);
+    if (requestId !== state.creatorRequest) return;
     state.creatorPage = data.page || 1;
     state.creatorPages = data.pages || 1;
     state.creatorTotal = data.total || 0;
@@ -699,10 +820,14 @@
   }
 
   async function loadFolder(path) {
+    const requestId = ++state.folderRequest;
+    $('folder-select').disabled = true;
     const data = await api(`/api/folders?path=${encodeURIComponent(path || '')}`);
+    if (requestId !== state.folderRequest) return;
     state.folderPath = data.path;
     state.folderParent = data.parent;
     state.folderRoot = data.root;
+    $('folder-select').disabled = false;
     $('folder-path').textContent = data.path;
     $('folder-up').disabled = !data.parent;
     const roots = $('folder-roots');
@@ -936,14 +1061,65 @@
 
   async function requestPreview(relative, kind) {
     try {
+      state.previewRequested = true;
       await startJob('preview', {
         path: relative,
         kind,
         output_dir: (state.lastJob && state.lastJob.request && state.lastJob.request.output_dir) || outputDirValue(),
       }, t('Vorschau wird erzeugt …'));
     } catch (error) {
+      state.previewRequested = false;
       toast(error.message, 'bad');
     }
+  }
+
+  async function loadOffers(page = 1) {
+    const data = await api(`/api/offers?page=${page}`);
+    state.offersPage = data.page;
+    $('offers-list').replaceChildren();
+    for (const item of data.items || []) {
+      const row = document.createElement('tr');
+      for (const value of [item.username, item.kind === 'free' ? t('Dauerhaft kostenlos') : t('Trial – Website prüfen'), item.status, item.detail]) {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.appendChild(cell);
+      }
+      const cell = document.createElement('td');
+      const link = document.createElement('a');
+      link.href = `https://onlyfans.com/${encodeURIComponent(item.username)}`;
+      link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = t('Öffnen');
+      cell.appendChild(link); row.appendChild(cell); $('offers-list').appendChild(row);
+    }
+    if (!data.items?.length) {
+      const row = document.createElement('tr'); const cell = document.createElement('td');
+      cell.colSpan = 5; cell.textContent = t('Noch keine Angebote. Suche starten.'); row.appendChild(cell); $('offers-list').appendChild(row);
+    }
+    $('offers-page').textContent = `${data.page} / ${data.pages} · ${data.total}`;
+    $('offers-prev').disabled = data.page <= 1;
+    $('offers-next').disabled = data.page >= data.pages;
+  }
+
+  function renewalOptions() {
+    return { profiles: splitProfiles($('renewal-profiles').value), confirm_free_only: $('renewal-consent').checked,
+      enabled: $('renewal-enabled').checked, time: $('renewal-time').value || '04:00' };
+  }
+
+  async function renewalAction(action) {
+    try {
+      const options = renewalOptions();
+      if (action !== 'scan' && (action === 'run' || options.enabled)) {
+        if (!options.confirm_free_only || !options.profiles.length) throw new Error(t('Bitte Profile auswählen und kostenlose Wiederanmeldung bestätigen.'));
+        if (!window.confirm(t('Nur ausgewählte dauerhaft kostenlose Profile anmelden? Trials und kostenpflichtige Profile werden übersprungen.'))) return;
+      }
+      if (action === 'save') {
+        const settings = await api('/api/settings', { method: 'POST', body: { free_renewal: options } });
+        state.settings = settings;
+        $('renewal-summary').textContent = t(options.enabled ? 'Automatik aktiv – nur gespeicherte kostenlose Profile.' : 'Automatik deaktiviert.');
+        toast(t('Einstellungen gespeichert.'), 'ok');
+      } else {
+        await startJob(action === 'scan' ? 'offers_scan' : 'free_renew', options);
+      }
+    } catch (error) { toast(error.message, 'bad'); }
   }
 
   /* ------------------------------------------------------------------ */
@@ -951,6 +1127,12 @@
   /* ------------------------------------------------------------------ */
 
   function wireEvents() {
+    $('scan-offers').addEventListener('click', () => renewalAction('scan'));
+    $('renew-free').addEventListener('click', () => renewalAction('run'));
+    $('save-renewal').addEventListener('click', () => renewalAction('save'));
+    $('refresh-offers').addEventListener('click', () => loadOffers(state.offersPage).catch((error) => toast(error.message, 'bad')));
+    $('offers-prev').addEventListener('click', () => loadOffers(state.offersPage - 1).catch((error) => toast(error.message, 'bad')));
+    $('offers-next').addEventListener('click', () => loadOffers(state.offersPage + 1).catch((error) => toast(error.message, 'bad')));
     $('refresh-button').addEventListener('click', () => poll());
     $('logout-button').addEventListener('click', async () => {
       try { await api('/api/logout', { method: 'POST', body: {} }); } catch (_) { /* ignore */ }
@@ -1052,7 +1234,7 @@
 
     $('job-pause').addEventListener('click', async () => {
       if (!state.activeJob) return;
-      const paused = state.activeJob.status === 'paused';
+      const paused = state.activeJob.pause_requested || state.activeJob.status === 'paused';
       try {
         await api(`/api/jobs/${state.activeJob.id}/${paused ? 'resume' : 'pause'}`, {
           method: 'POST', body: {},
@@ -1084,20 +1266,17 @@
       updateJobCard(state.activeJob || state.lastJob);
       updateCreatorSelection();
       if (state.creatorTotal) loadCreators(state.creatorPage).catch(() => {});
+      const activeTab = document.querySelector('.tab.active');
+      if (activeTab) $('page-heading').textContent = activeTab.textContent;
     });
   }
 
   async function boot() {
-    try {
-      const session = await api('/api/session');
-      state.csrf = session.csrf;
-      await loadSettings();
-      if (!outputDirValue()) showTab('settings');
-      await poll();
-      window.setInterval(() => { if (!document.hidden) poll(); }, 3000);
-    } catch (error) {
-      if (error.status !== 401) toast(error.message || t('Die Oberfläche konnte nicht geladen werden.'), 'bad');
-    }
+    await window.ofdlI18n?.ready;
+    // Install retry before the first request. A failed boot must not strand UI.
+    window.setInterval(() => { if (!document.hidden) poll(); }, 3000);
+    await poll();
+    if (state.settingsLoaded && !outputDirValue() && !state.activeJob) showTab('settings');
   }
 
   wireTabs();

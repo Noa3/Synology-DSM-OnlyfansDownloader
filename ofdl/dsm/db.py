@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 ACTIVE_STATES = ('queued', 'running', 'paused')
 MAX_EVENT_ROWS_PER_JOB = 3000
 MAX_JOBS_KEPT = 100
@@ -62,6 +62,23 @@ CREATE TABLE IF NOT EXISTS creators (
     scanned_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS creators_name_idx ON creators(username COLLATE NOCASE);
+
+CREATE TABLE IF NOT EXISTS offers (
+    account_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    status TEXT NOT NULL,
+    detail TEXT NOT NULL,
+    scanned_at TEXT NOT NULL,
+    PRIMARY KEY(account_id, username)
+);
+CREATE TABLE IF NOT EXISTS renewal_attempts (
+    account_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    day TEXT NOT NULL,
+    status TEXT NOT NULL,
+    PRIMARY KEY(account_id, username, day)
+);
 """
 
 _JOB_FIELDS = {
@@ -86,8 +103,8 @@ def _configure(db: sqlite3.Connection) -> None:
     db.execute('PRAGMA mmap_size=0')
 
 
-def open_db(path: Path | str) -> sqlite3.Connection:
-    db = sqlite3.connect(str(path), timeout=10)
+def open_db(path: Path | str, *, check_same_thread: bool = True) -> sqlite3.Connection:
+    db = sqlite3.connect(str(path), timeout=10, check_same_thread=check_same_thread)
     db.row_factory = sqlite3.Row
     _configure(db)
     return db
@@ -260,6 +277,13 @@ def list_events(db: sqlite3.Connection, job_id: int, after: int = 0,
         (int(job_id), max(0, int(after)), limit),
     ).fetchall()
     return [dict(row) for row in rows]
+
+
+def recent_events(db: sqlite3.Connection, job_id: int, limit: int = 100) -> list[dict[str, Any]]:
+    limit = max(1, min(200, int(limit)))
+    rows = db.execute('SELECT id,ts,level,message FROM events WHERE job_id=? '
+                      'ORDER BY id DESC LIMIT ?', (int(job_id), limit)).fetchall()
+    return [dict(row) for row in reversed(rows)]
 
 
 def prune_events(db: sqlite3.Connection, job_id: int,

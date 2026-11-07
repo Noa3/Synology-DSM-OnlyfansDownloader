@@ -40,6 +40,7 @@ def main() -> None:
             'SYNOPKG_PKGVAR': 'private',
         }.items()}
         env['OFDL_SHARE_ROOT'] = str(share)
+        env['OFDL_DSM_LANGUAGE'] = 'ptg'  # Synthetic DSM default, not a real NAS.
         with patch.dict(os.environ, env):
             server, app = create_server(resolve_paths(), '127.0.0.1', 0, start_scheduler=False)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -79,11 +80,12 @@ def main() -> None:
                     expect(page.locator('#library-output')).to_have_text(str(second))
                     expect(page.locator('#library-files')).to_have_text('–')
                     for language, library_text in [('de', 'Bibliothek'), ('fr', 'Bibliothèque'),
-                                                    ('es', 'Biblioteca'), ('en', 'Library'), ('de', 'Bibliothek')]:
+                                                    ('es', 'Biblioteca'), ('it', 'Libreria'), ('nl', 'Bibliotheek'),
+                                                    ('pt', 'Biblioteca'), ('en', 'Library'), ('de', 'Bibliothek')]:
                         page.select_option('#language-select', language)
                         expect(page.locator('[data-tab="library"]')).to_have_text(library_text)
                         expect(page.locator('#library-output')).to_have_text(str(second))
-                        for tab in ('dashboard', 'downloads', 'session', 'library', 'settings'):
+                        for tab in ('dashboard', 'downloads', 'session', 'library', 'offers', 'settings'):
                             page.click(f'[data-tab="{tab}"]')
                             expect(page.locator(f'#tab-{tab}')).to_be_visible()
                     page.click('#browse-library')
@@ -111,15 +113,96 @@ def main() -> None:
                     page.reload()
                     page.click('[data-tab="downloads"]')
                     expect(page.locator('#output-dir')).to_have_value(str(second))
+                    # Persisted worker state is restored after reload, even if
+                    # events fail independently of the healthy status endpoint.
+                    from ofdl.dsm import db as control_db
+                    with control_db.connect(app.paths.db) as conn:
+                        job = control_db.create_job(conn, 'download', {'output_dir': str(second)})
+                        stats = {'scanning': True, 'current_file': 'example.mp4', 'current_done': 500,
+                                 'current_total': 1000, 'current_speed': 100,
+                                 'last_activity_at': control_db.now_iso()}
+                        control_db.update_job(conn, job, status='running', progress_done=3,
+                                              progress_total=10, stats=json.dumps(stats))
+                        for n in range(210): control_db.add_event(conn, job, 'log', f'event-{n}')
+                        conn.commit()
+                    page.select_option('#language-select', 'en')
+                    page.reload()
+                    expect(page.locator('#job-title')).to_contain_text(f'#{job}')
+                    expect(page.locator('#service-label')).to_have_text('Service online')
+                    expect(page.locator('#job-progress')).to_have_class('progress indeterminate')
+                    expect(page.locator('#file-progress')).to_have_attribute('aria-valuenow', '50')
+                    expect(page.locator('#event-list')).to_contain_text('event-209')
+                    assert page.locator('#event-list li').count() <= 100
+                    with control_db.connect(app.paths.db) as conn:
+                        stats['scanning'] = False
+                        control_db.update_job(conn, job, stats=json.dumps(stats))
+                    page.click('#refresh-button')
+                    expect(page.locator('#job-progress')).to_have_attribute('aria-valuenow', '30')
+                    if '--screenshots' in sys.argv:
+                        page.screenshot(path=str(ROOT / 'docs/dsm-ui-dashboard-en.png'), full_page=True)
+                        page.select_option('#language-select', 'de')
+                        page.screenshot(path=str(ROOT / 'docs/dsm-ui-dashboard.png'), full_page=True)
+                        page.select_option('#language-select', 'en')
+                    # A healthy service with a failed event endpoint is not
+                    # mislabelled "unreachable"; current job stays on screen.
+                    page.route('**/api/jobs/*', lambda route: route.fulfill(status=503, json={'error': 'fixture outage'}))
+                    page.reload()
+                    expect(page.locator('#job-title')).to_contain_text(f'#{job}')
+                    expect(page.locator('#connection-banner')).to_contain_text('Service online.')
+                    expect(page.locator('#service-label')).to_have_text('Service online')
+                    page.unroute('**/api/jobs/*')
+                    page.click('#refresh-button')
+                    expect(page.locator('#connection-banner')).to_be_hidden()
+                    # Failed initial status load must retry without another
+                    # reload. No work is stopped or automatically re-started.
+                    initial = {'failed': False}
+                    def status_route(route):
+                        if not initial['failed']:
+                            initial['failed'] = True
+                            route.fulfill(status=503, json={'error': 'fixture boot failure'})
+                        else:
+                            route.continue_()
+                    page.route('**/api/status', status_route)
+                    page.reload()
+                    expect(page.locator('#connection-banner')).to_be_visible()
+                    expect(page.locator('#job-title')).to_contain_text(f'#{job}', timeout=12000)
+                    expect(page.locator('#service-label')).to_have_text('Service online')
+                    page.unroute('**/api/status')
+                    with control_db.connect(app.paths.db) as conn:
+                        control_db.finish_job(conn, job, 'failed', error='HTTP 401: import a fresh session')
+                    page.click('#refresh-button')
+                    expect(page.locator('#job-error')).to_contain_text('HTTP 401')
+                    page.reload()
+                    expect(page.locator('#job-status')).to_have_text('Error')
+                    expect(page.locator('#job-error')).to_contain_text('HTTP 401')
+                    page.set_viewport_size({'width': 375, 'height': 850})
+                    for tab in ('dashboard', 'offers', 'settings'):
+                        page.click(f'[data-tab="{tab}"]')
+                        assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), tab
                     page.click('#logout-button')
                     expect(page.locator('#auth-submit')).to_be_visible()
                     for language, label in [('fr', 'Connexion'), ('es', 'Iniciar sesión'), ('de', 'Anmelden')]:
                         page.select_option('#language-select', language)
                         expect(page.locator('#auth-submit')).to_have_text(label)
+                    auto = browser.new_page(locale='en-US')
+                    base = f'http://127.0.0.1:{server.server_address[1]}'
+                    auto.goto(base + '/login')
+                    expect(auto.locator('html')).to_have_attribute('lang', 'pt')
+                    auto.context.add_cookies([{'name': 'lang', 'value': 'ita', 'url': base}])
+                    auto.reload()
+                    expect(auto.locator('html')).to_have_attribute('lang', 'it')
+                    auto.select_option('#language-select', 'nl')
+                    auto.reload()
+                    expect(auto.locator('html')).to_have_attribute('lang', 'nl')
+                    auto.select_option('#language-select', 'auto')
+                    expect(auto.locator('html')).to_have_attribute('lang', 'it')
                     browser.close()
-                assert not errors, errors
-                print('PASS: setup/login DE/EN/FR/ES, explicit storage, shared manifest path, '
-                      'cache invalidation, folder consent, file import, persistence; no browser errors.')
+                # Deliberate 503s generate expected browser network diagnostics.
+                unexpected = [message for message in errors if '503' not in message]
+                assert not unexpected, unexpected
+                print('PASS: seven languages, DSM auto/manual override, storage consent, manifest paths, '
+                      'reload during job, event/boot failures, automatic reconnect, honest progress, '
+                      'visible auth error, file import, persistence; no unexpected browser errors.')
             finally:
                 server.shutdown()
                 server.server_close()

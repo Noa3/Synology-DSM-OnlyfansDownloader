@@ -58,6 +58,7 @@ class Harness:
             'with db.connect(paths.db) as c:\n'
             '    db.finish_job(c, job_id, "completed", result={"message":"fake done"}, exit_code=0)\n',
             encoding='utf-8')
+        self.env['OFDL_WORKER_COMMAND'] = os.environ.get('OFDL_WORKER_COMMAND')
         os.environ['OFDL_WORKER_COMMAND'] = json.dumps([sys.executable, str(self.fake_worker)])
         self.paths = resolve_paths()
         self.server, self.app = create_server(self.paths, '127.0.0.1', 0, start_scheduler=False)

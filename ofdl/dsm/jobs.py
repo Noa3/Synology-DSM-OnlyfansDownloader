@@ -7,6 +7,7 @@ idle NAS keeps a small resident set.
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -264,23 +265,23 @@ def public_payload(kind: str, payload: dict[str, Any]) -> dict[str, Any]:
 def public_job(row: dict[str, Any], *, include_payload: bool = True) -> dict[str, Any]:
     try:
         payload = json.loads(row.get('payload') or '{}')
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         payload = {}
     try:
         result = json.loads(row.get('result') or 'null') if row.get('result') else None
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         result = None
     try:
         stats = json.loads(row.get('stats') or '{}')
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, RecursionError):
         stats = {}
     job = {
         'id': row.get('id'),
         'kind': row.get('kind'),
         'status': row.get('status'),
         'phase': row.get('phase') or '',
-        'progress_done': int(row.get('progress_done') or 0),
-        'progress_total': int(row.get('progress_total') or 0),
+        'progress_done': safe_count(row.get('progress_done')),
+        'progress_total': safe_count(row.get('progress_total')),
         'stats': stats if isinstance(stats, dict) else {},
         'pid': row.get('pid'),
         'exit_code': row.get('exit_code'),
@@ -295,6 +296,38 @@ def public_job(row: dict[str, Any], *, include_payload: bool = True) -> dict[str
     if include_payload:
         job['request'] = public_payload(str(row.get('kind') or ''), payload if isinstance(payload, dict) else {})
     return job
+
+
+def safe_count(value: Any) -> int:
+    try:
+        return max(0, int(value or 0))
+    except (ValueError, TypeError, OverflowError):
+        return 0
+
+
+def json_safe(value: Any, depth: int = 0) -> Any:
+    """Legacy/corrupt NaN counters must not break every status response."""
+    if depth > 20:
+        return None
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: json_safe(item, depth + 1) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item, depth + 1) for item in value]
+    return value
+
+
+def normalize_renewal(value: Any, *, require_confirmation: bool = True) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise AppError('Ungültige Free-Resub-Einstellungen.')
+    profiles = parse_profiles(value.get('profiles'))
+    if not profiles or len(profiles) > 200:
+        raise AppError('Bitte 1 bis 200 kostenlose Profile ausdrücklich auswählen.')
+    if require_confirmation and value.get('confirm_free_only') is not True:
+        raise AppError('Bitte die kostenlose Wiederanmeldung ausdrücklich bestätigen.')
+    return {'profiles': profiles, 'enabled': value.get('enabled') is True,
+            'time': _safe_time(value.get('time', '04:00'))}
 
 
 def default_download_options(paths: Paths) -> dict[str, Any]:

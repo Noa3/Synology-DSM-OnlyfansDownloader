@@ -36,6 +36,7 @@ MAX_RETRY_WAIT = 300
 class ApiError(AppError):
     def __init__(self, status: int, *, details: ErrorDetails | None = None, diagnostic: str = ''):
         self.status = status
+        self.details = details
         advice = {
             400: 'Refresh signing rules, check the system clock, and re-import your session if needed.',
             401: 'The session was rejected. Log in again and import a fresh session.',
@@ -250,8 +251,9 @@ def load_rules(source: str, control: Control, *, force: bool = False,
 
 class ApiClient:
     def __init__(self, auth: Credentials, rules: Rules, control: Control, *,
-                 session: requests.Session | None = None, interval: float = 0.6,
-                 retries: int = 3, emit: EventSink = no_events, proxy: str = ''):
+                  session: requests.Session | None = None, interval: float = 0.6,
+                  retries: int = 3, emit: EventSink = no_events, proxy: str = '',
+                  retry_floor: float = 0):
         self.auth = auth.validate()
         self.rules = rules
         self.control = control
@@ -260,6 +262,7 @@ class ApiClient:
         self.session = self.transport.session
         self.interval = max(0.0, interval)
         self.retries = max(0, min(5, retries))
+        self.retry_floor = max(0.0, min(MAX_RETRY_WAIT, float(retry_floor)))
         self.emit = emit
         self.last_request = 0.0
         self.emit('log', 'API transport: ' + self.transport.kind +
@@ -364,7 +367,19 @@ class ApiClient:
                         response.close()
                     except Exception:
                         pass
-            wait_retry(self.control, attempt, header, self.emit)
+            if self.retry_floor:
+                delay = max(self.retry_floor, retry_delay(header) or 0)
+                if delay > MAX_RETRY_WAIT:
+                    raise AppError('The server requested a long retry delay. This run is stopped rather than retrying earlier than requested.')
+                self.emit('retry', {'seconds': delay, 'attempt': attempt + 1,
+                                    'reason': f'HTTP {status}' if response is not None and (status == 429 or status >= 500) else 'network',
+                                    'retry_at': datetime.fromtimestamp(time.time() + delay, timezone.utc).isoformat()})
+                try:
+                    self.control.wait(delay)
+                finally:
+                    self.emit('retry', {'seconds': 0})
+            else:
+                wait_retry(self.control, attempt, header, self.emit)
         raise AppError('The API request could not be completed.')
 
     def user(self, name: str = 'me') -> dict[str, Any]:

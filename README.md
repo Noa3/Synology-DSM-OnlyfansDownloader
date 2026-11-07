@@ -49,7 +49,7 @@ nicht über SSH.
    - Name: `SynoCommunity`
    - Ort: `https://packages.synocommunity.com/`
    - Die Quelle muss vertrauenswürdig sein; DSM zeigt ggf. einen Hinweis.
-2. **`OnlyFansDL-r1000-dsm72_2.8.0-4.spk` herunterladen** (Release-Seite dieses
+2. **`OnlyFansDL-r1000-dsm72_2.8.0-5.spk` herunterladen** (Release-Seite dieses
    Repositories) und in Package Center → Manuell installieren auswählen.
 3. Package Center installiert **Python 3.13 automatisch** als Abhängigkeit.
    Falls die Laufzeit fehlt, zuerst `Python 3.13` aus SynoCommunity installieren.
@@ -78,10 +78,13 @@ SSH ist nur für die optionale Speicher-/Diagnosemessung nötig (siehe
 
 ## Sprachen
 
-- **Weboberfläche:** Deutsch, Englisch, Französisch und Spanisch über den
-  Umschalter oben rechts, auch bei Login/Setup. Die Wahl wird im Browser
-  gespeichert. Nicht übersetzte technische Servermeldungen bleiben Deutsch
-  bzw. fallen auf Englisch zurück.
+- **Weboberfläche:** Deutsch, Englisch, Französisch, Spanisch sowie Kerntexte
+  auf Italienisch, Niederländisch und Portugiesisch. Nicht übersetzte Hilfe-/
+  technische Texte fallen auf Englisch bzw. Deutsch zurück.
+- **Auto · DSM / Browser:** Unterstützter DSM-Sprachhinweis/lesbarer Sprachcookie,
+  sonst lesbare DSM-Systemsprache, sonst Browser. Die persönliche DSM-Sprache
+  ist im separaten Browserfenster nicht immer verfügbar. Manuelle Auswahl
+  überschreibt Auto und wird im Browser gespeichert.
 - **GitHub Pages:** [Englisch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/)
   und [Deutsch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/de/).
 - **Dokumentation:** Diese README ist deutsch; die Installations- und
@@ -102,6 +105,31 @@ Beim Deinstallieren werden die privaten Steuerdaten und die venv entfernt.
 **Gewählte Bibliotheken und alle Downloads bleiben erhalten.** Ein Update
 behält Einstellungen, Sitzung und die venv bei und installiert nur geänderte
 Wheels nach.
+
+## Sitzungen, Status und Free & Trials
+
+- Die OnlyFans-Sitzung bleibt nach Seitenreload, Paketneustart und Upgrade in
+  `var/data/session.json` gespeichert (0600, nicht verschlüsselt). OnlyFans kann
+  sie widerrufen/ablaufen lassen; sie wird nicht automatisch erneuert. Die
+  separate Web-Anmeldung läuft nach 12 Stunden ab bzw. beim Dienstneustart.
+- Aktiver/letzter Auftrag und letzte Ereignisse werden nach Reload wieder geladen.
+  Verbindungsprobleme löschen die Anzeige nicht und starten keine zweite Arbeit.
+- Während der Suche ist der Gesamtumfang unbekannt; Gesamtablauf und aktuelle
+  Datei haben getrennte Balken. Vollständige Fehler sind im Auftrag sichtbar.
+- Vorübergehende API-Lesefehler warten auf DSM mindestens 180 Sekunden vor dem
+  nächsten Versuch; längeres Retry-After wird bis 300 Sekunden respektiert,
+  darüber wird gestoppt. 401/Authentifizierungsfehler brauchen eine neue Sitzung;
+  Sicherheitsabfragen werden nicht umgangen. Keine automatischen POST-Retries.
+- **Free & Trials:** Angebote lesend suchen. Nur ausdrücklich aufgelistete,
+  unmittelbar erneut als dauerhaft kostenlos geprüfte Profile können automatisch
+  abonniert werden. Tägliche Automatik ist standardmäßig aus und kontogebunden.
+  Trials bleiben wegen möglicher späterer Gebühren zur Prüfung auf der Website.
+  Preisänderungen zwischen Prüfung und Serverantwort sind nicht atomar sperrbar.
+- **DSM Stoppen:** Eigene Worker-Prozessgruppen samt Kindern werden beendet;
+  PID-Identität wird geprüft, eine fehlende Service-PID-Datei kann rekonstruiert
+  werden. Linux-Prozesstests und der noch ausstehende DSM-Test sind getrennt.
+
+Details: [`docs/RELIABILITY.md`](docs/RELIABILITY.md).
 
 ## Speicherverbrauch
 
@@ -134,8 +162,8 @@ python tools/fetch_wheels.py
 python tools/build_spk.py
 
 # Ergebnis
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-4.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-4.spk.sha256
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-5.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-5.spk.sha256
 ```
 
 Der Build benötigt keinen Synology-Toolchain und kein Linux. Die Wheels werden aus
@@ -179,7 +207,7 @@ klare Trennung zwischen „lokal geprüft“ und „auf DSM-Hardware geprüft“
 
 Ein Fenster im DSM-Desktop ist grundsätzlich möglich, braucht aber eine
 HTTPS-/Same-Origin-Integration. Einfaches Einbetten von HTTP-Port 8765 würde
-bei HTTPS-DSM an Mixed Content und dem Klickschutz scheitern. **2.8.0-4 öffnet
+bei HTTPS-DSM an Mixed Content und dem Klickschutz scheitern. **2.8.0-5 öffnet
 weiterhin die Browseroberfläche**; Sicherheitsheader werden nicht abgeschaltet.
 
 Die Sitzung lässt sich geführt per cURL-Text oder HAR/JSON-Dateiauswahl

@@ -1,5 +1,27 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-5 — resilient status, language and opt-in free resubscribe
+
+- Restore active/latest job and recent events after reload. Retry failed initial
+  loads; distinguish status/event failures without blanking last known state.
+- Separate indeterminate discovery, fixed-total progress and current-file bytes.
+  Show full job errors, pending pause/cancel and 180-second API-read backoff.
+- Release SQLite write locks after worker events, support the download thread
+  and flush final counters. Keep creator lists on failed refresh, sanitize NaN.
+- Auto language: supported DSM hint/cookie, DSM system default, browser fallback.
+  Manual choice wins. Add Italian/Dutch/Portuguese core catalogs; text falls back
+  to English/German where translations are not available.
+- Read-only Free & Trials discovery and opt-in free-page resubscriptions,
+  optionally daily. Recheck price, skip paid/trial/active profiles, bind consent
+  to account and reserve daily attempts before POST. Trials stay website-only.
+  No live subscription actions performed. API offers no atomic price guarantee.
+- Stop owned worker groups/descendants, recover a missing service PID file and
+  guard against PID reuse. Add real Linux process tests in CI; DSM unverified.
+- DSM API reads wait at least 180 seconds for network/429/5xx issues, honor
+  Retry-After up to 300 seconds and remain cancellable. No auth/POST retries.
+- Explain session persistence and manual SPK updates. No automatic installer,
+  no new shared folders, no automatic library migration/deletion.
+
 ## DSM 2.8.0-4 — explicit storage consent and shared library path
 
 - Remove automatic creation/permission grants for the OnlyFans and OnlyFansDL

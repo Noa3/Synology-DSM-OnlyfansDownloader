@@ -24,6 +24,12 @@ Versionsangaben.
 - Die OnlyFans-Sitzung wird ausschließlich lokal gespeichert
   (`var/data/session.json`, Modus `0600`). Sie wird nicht an Dritte gesendet und
   nicht in Einstellungen, Auftragsdaten oder Protokollen abgelegt.
+- Sitzungsdatei ist nicht verschlüsselt. Dateirechte schützen sie vor anderen
+  lokalen Benutzern, nicht vor NAS-Administratoren/root oder kompromittiertem NAS.
+- Free-Resubscribe ist ausdrücklich opt-in, kontogebunden, auf erneut als regulär
+  kostenlos geprüfte Profile begrenzt. Trials und Paid-Rebill bleiben außen vor.
+  Kein POST-Retry bei unklarem Ausgang. Die Remote-API bietet keine verifizierte
+  atomare Preissperre; das Restrisiko einer Preisänderung wird vorab angezeigt.
 - Die Anmeldung ist **kein DSM-SSO**. Das Web-Passwort ist unabhängig vom
   DSM-Benutzerkonto.
 
@@ -62,8 +68,9 @@ Versionsangaben.
   Login-Fenster wird nicht ausgelesen; CSP/Klickschutz bleiben aktiv.
 - **Kein DRM-Bypass**: DRM-geschützte Medien werden gezählt und übersprungen.
   Es werden keine geschützten Inhalte entschlüsselt.
-- **Keine Kaufautomatisierung**: Käufe und kostenpflichtige Aktionen sind nicht
-  Teil der DSM-Oberfläche. Die bestehende Engine bleibt lesend.
+- **Keine Kaufautomatisierung**: Käufe und absichtlich kostenpflichtige Aktionen
+  sind nicht Teil der DSM-Oberfläche. Free-Anmeldungen sind eine schreibende,
+  separat freizugebende Ausnahme; ihre Preisschutz-Grenzen stehen oben.
 
 ## Passwort zurücksetzen
 
