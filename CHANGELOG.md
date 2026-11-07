@@ -1,5 +1,13 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-3 — 2026-11-07 — supported privilege pattern
+
+- Replace the custom `ctrl-script` block and package-specific group with the
+  exact privilege pattern used by working SynoCommunity packages:
+  `run-as: package`, `username: sc-onlyfansdl`, `groupname: synocommunity`.
+- This removes the DSM 7 root-privilege warning that still blocked 2.8.0-2.
+- No administrator group and no custom group are requested.
+
 ## DSM 2.8.0-2 — 2026-11-07 — unprivileged install fix, bilingual UI
 
 - Remove `join-groupname: administrators`; DSM 7 blocks third-party packages from

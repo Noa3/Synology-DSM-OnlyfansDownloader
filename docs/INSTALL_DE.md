@@ -15,7 +15,7 @@ pip-Befehle** erforderlich.
 
 ## 2. Paket installieren
 
-1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-2.spk` aus dem Release herunterladen.
+1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-3.spk` aus dem Release herunterladen.
 2. Package Center → **Manuell installieren** → Datei auswählen.
 3. DSM zeigt die Abhängigkeit **Python 3.13** an und installiert sie
    automatisch aus der SynoCommunity-Quelle.
@@ -150,7 +150,7 @@ wieder, wenn derselbe Ordner ausgewählt wird.
 | Anmeldung funktioniert nicht | Passwort aus dem Installations-Wizard verwenden. Bei vergessenem Passwort Paket deinstallieren und neu installieren (Downloads bleiben erhalten) oder die Steuerdaten zurücksetzen. |
 | „Keine Sitzung eingerichtet“ | Unter **Sitzung** importieren und testen. |
 | Sitzungstest schlägt fehl | Anfrage von `onlyfans.com/api2/v2/` kopieren, nicht von einer anderen Seite. Session kann an Netz/IP gebunden sein; im gleichen Netz wie der Browser testen. Cloudflare-Anfragen werden nicht umgangen. |
-| „Paket benötigt root-Rechte“ / Administratorwarnung | Es wird die alte Version 2.8.0-1 installiert. Version **2.8.0-2** verwenden; sie fordert keine root-/Administratorgruppen-Rechte an. |
+| „Paket benötigt root-Rechte“ / Administratorwarnung | Es wird eine alte Version (2.8.0-1/2.8.0-2) installiert. Version **2.8.0-3** verwenden; sie nutzt das unterstützte SynoCommunity-Privileg-Muster ohne root-/Administratorgruppen-Rechte. |
 | Downloadordner nicht beschreibbar | Einen Ordner unter `OnlyFansDL` oder `OnlyFans` wählen. Andere Freigaben benötigen eine Freigabeberechtigung für `sc-onlyfansdl`; das Paket fordert bewusst keine Administratorgruppe an. |
 | Kein DSM-Menüeintrag | Paket neu starten; `reloadui` wird beim Installieren gesetzt. Alternativ `http://<NAS-IP>:8765/` direkt öffnen. |
 | Viele Dateien, langsamer erster Lauf | Erwartet bei Altlayouts; Folgeläufe nutzen das Manifest. Keine Medien werden dauerhaft im Steuerdienst gehalten. |

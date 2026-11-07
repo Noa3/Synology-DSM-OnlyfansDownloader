@@ -49,7 +49,7 @@ nicht über SSH.
    - Name: `SynoCommunity`
    - Ort: `https://packages.synocommunity.com/`
    - Die Quelle muss vertrauenswürdig sein; DSM zeigt ggf. einen Hinweis.
-2. **`OnlyFansDL-r1000-dsm72_2.8.0-2.spk` herunterladen** (Release-Seite dieses
+2. **`OnlyFansDL-r1000-dsm72_2.8.0-3.spk` herunterladen** (Release-Seite dieses
    Repositories) und in Package Center → Manuell installieren auswählen.
 3. Package Center installiert **Python 3.13 automatisch** als Abhängigkeit.
    Falls die Laufzeit fehlt, zuerst `Python 3.13` aus SynoCommunity installieren.
@@ -131,8 +131,8 @@ python tools/fetch_wheels.py
 python tools/build_spk.py
 
 # Ergebnis
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-2.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-2.spk.sha256
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-3.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-3.spk.sha256
 ```
 
 Der Build benötigt keinen Synology-Toolchain und kein Linux. Die Wheels werden aus

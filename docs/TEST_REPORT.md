@@ -1,4 +1,4 @@
-# Testbericht — OnlyFans DL für Synology DSM 2.8.0-2
+# Testbericht — OnlyFans DL für Synology DSM 2.8.0-3
 
 Build-Datum: **2026-11-07**
 Zielplattform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 aus SynoCommunity**
@@ -63,15 +63,15 @@ Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
 ## Paketprüfung
 
 ```
-Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-2.spk
+Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-3.spk
 Größe:  21,98 MiB
-SHA256: 0ff162864431ed99d4954e02edbe8cd668697aae3267a47e5640961f8954dc30
-MD5(package.tgz): 4376cf52ec79d7c1e69ceffe0c1a9a82
+SHA256: 3ba13d574f40771dce266b9ba49a16e6c7e75f39d46aca7e2611c7ac1aa090a9
+MD5(package.tgz): f85f70249a69aac26bf959cab2ada75a
 ```
 
 Geprüft:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-2`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-3`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
   `install_dep_packages=python313>=3.13.11-9`, MD5-Checksumme stimmt.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
@@ -83,8 +83,9 @@ Geprüft:
   kein `@ACTION@` mehr.
 - `conf/privilege`, `conf/resource`, `WIZARD_UIFILES/*`, `ui/config` sind
   gültiges JSON; `bash -n` parst alle Shell-Skripte.
-- `conf/privilege`: `run-as: package`, `sc-onlyfansdl`, **kein**
-  `join-groupname`, alle `ctrl-script`-Aktionen laufen als `package`.
+- `conf/privilege`: `run-as: package`, `sc-onlyfansdl`, `groupname: synocommunity`,
+  **kein** `join-groupname`, **kein** `ctrl-script`; entspricht dem Muster
+  funktionierender SynoCommunity-Pakete.
 - `conf/resource`: Freigaben `OnlyFansDL` und `OnlyFans`, jeweils rw für
   `sc-onlyfansdl`.
 - Zwei Builds mit `SOURCE_DATE_EPOCH=1794009600` sind byte-identisch.
