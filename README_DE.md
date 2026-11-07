@@ -10,6 +10,8 @@ benötigten Bibliotheken offline und startet eine kleine Weboberfläche auf dem 
 > und nur Inhalte, die du speichern darfst. Das Projekt umgeht keine Zugriffskontrollen,
 > kein DRM und keine Sicherheitsabfragen. Die Live-API kann sich jederzeit ändern.
 
+<img width="1767" height="1437" alt="OnlyFans DL DSM Screenshot" src="https://github.com/user-attachments/assets/615aa274-fa2a-41da-9f01-10cfc64c7333" />
+
 ## Enthalten
 
 - **Natives `.spk`** für DS723+ / DS923+ / DS1522+ (Architektur `r1000`, DSM 7.2).

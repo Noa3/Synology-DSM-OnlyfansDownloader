@@ -10,6 +10,8 @@ libraries offline and starts a small web interface on the NAS.
 > only content you are allowed to save. The project does not bypass access
 > controls, DRM or security challenges. The live API may change at any time.
 
+<img width="1767" height="1437" alt="OnlyFans DL DSM screenshot" src="https://github.com/user-attachments/assets/615aa274-fa2a-41da-9f01-10cfc64c7333" />
+
 ## Contents
 
 - **Native `.spk`** for DS723+ / DS923+ / DS1522+ (`r1000` architecture, DSM 7.2).
