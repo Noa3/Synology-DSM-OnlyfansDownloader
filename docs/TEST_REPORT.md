@@ -65,7 +65,7 @@ Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
 ```
 Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-3.spk
 Größe:  21,98 MiB
-SHA256: fddc9097f363e99d2c7d9e936dd22cacfd4b66231998435d0fcb2699b3f73238
+SHA256: b2be28454309a4cb33f4cd43acb8f3456121ffeb6705bd33a8f9e72433afad71
 MD5(package.tgz): f85f70249a69aac26bf959cab2ada75a
 ```
 

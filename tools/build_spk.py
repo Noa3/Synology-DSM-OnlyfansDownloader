@@ -202,7 +202,6 @@ def info_text(checksum: str) -> str:
         ('silent_install', 'no'),
         ('silent_upgrade', 'yes'),
         ('reloadui', 'yes'),
-        ('support_conf_folder', 'yes'),
         ('install_dep_packages', 'python313>=3.13.11-9'),
         ('changelog', '2.8.0-3: Use the supported SynoCommunity package privilege pattern '
                       '(no administrator group, no ctrl-script block). 2.8.0-2: Bilingual UI/site, '
