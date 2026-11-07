@@ -211,6 +211,22 @@
     'Bitte eine Sitzung einfügen.': 'Please paste a session.',
     'Bitte zuerst eine Sitzung importieren.': 'Please import a session first.',
     'Die Oberfläche konnte nicht geladen werden.': 'The interface could not be loaded.',
+    'Es ist keine Sitzung eingerichtet. Bitte zuerst eine Sitzung importieren und testen.':
+      'No session configured. Import and test a session first.',
+    'Es ist keine Sitzung eingerichtet. Bitte zuerst eine Sitzung importieren.':
+      'No session configured. Import a session first.',
+    'Es ist noch kein Passwort eingerichtet.': 'No password is configured yet.',
+    'Passwort falsch.': 'Wrong password.',
+    'Zu viele fehlgeschlagene Anmeldungen. Bitte eine Minute warten.':
+      'Too many failed sign-ins. Wait one minute.',
+    'Der Downloadordner ist nicht beschreibbar. Prüfe die Freigabeberechtigung.':
+      'The download folder is not writable. Check the share permission.',
+    'Der Downloadordner konnte nicht angelegt werden. Prüfe Pfad und Berechtigungen.':
+      'The download folder could not be created. Check path and permissions.',
+    'Der Ordner liegt außerhalb der freigegebenen Volumes.':
+      'The folder is outside the allowed volumes.',
+    'Der Ordner kann nicht gelesen werden.': 'The folder cannot be read.',
+    'Der Ordner ist nicht beschreibbar.': 'The folder is not writable.',
     'Vorschau wird erzeugt …': 'Creating preview …',
     'Auftrag pausiert.': 'Job paused.',
     'Auftrag fortgesetzt.': 'Job resumed.',

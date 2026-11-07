@@ -142,7 +142,7 @@
     }
     if (!response.ok) {
       const message = (data && data.error) || `HTTP ${response.status}`;
-      const error = new Error(message);
+      const error = new Error(t(message));
       error.status = response.status;
       error.data = data;
       throw error;
