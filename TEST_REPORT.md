@@ -188,9 +188,9 @@ the service and the active worker.
 
 ## Known, unverified points
 
-Linux CI on implementation commit `ffd3124d04f79b5dffd7db5f2b90721f9cf45fc5`:
-[`42357026929`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42357026929),
-`Ran 69 tests in 22.421s`, `OK`, no skips. Includes the real Linux tests for
+Linux CI on implementation commit `50c114c10f4a010fe7500b7ea99a81167e0a2d04`:
+[`42399361663`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42399361663),
+`Ran 69 tests in 22.070s`, `OK`, no skips. Includes the real Linux tests for
 worker child groups and service stop without a PID file. **Not a DSM hardware
 test.**
 
