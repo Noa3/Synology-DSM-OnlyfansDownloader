@@ -125,8 +125,13 @@ python tools/build_spk.py
 
 Der Build benötigt kein Docker, keinen Synology-Toolchain und kein Linux. Die
 Wheels werden aus PyPI für die Zielplattform geladen und mit SHA-256 im Lockfile
-festgehalten. Ein zweiter Build mit demselben `SOURCE_DATE_EPOCH` erzeugt
-byte-identische Dateien; der Test `tests/test_dsm_package.py` prüft das.
+festgehalten. Ein zweiter Build mit demselben `SOURCE_DATE_EPOCH` erzeugt auf
+derselben Plattform byte-identische Dateien; der Inhalt (Quelltext, Lockfile,
+Wheels) ist auch zwischen Windows und Linux identisch, die gzip-Komprimierung
+kann sich jedoch zwischen zlib-Versionen unterscheiden. Der Release-Asset ist
+der lokal geprüfte Windows-Build; CI baut zusätzlich ein inhaltsgleiches
+Linux-Artefakt. `tests/test_dsm_package.py` prüft die Byte-Identität zweier
+Builds auf derselben Plattform.
 
 ## Tests
 

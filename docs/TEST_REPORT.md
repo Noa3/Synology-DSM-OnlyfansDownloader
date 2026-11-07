@@ -83,7 +83,11 @@ Geprüft:
   kein `@ACTION@` mehr.
 - `conf/privilege`, `conf/resource`, `WIZARD_UIFILES/*`, `ui/config` sind
   gültiges JSON; `bash -n` parst alle Shell-Skripte.
-- Zwei Builds mit `SOURCE_DATE_EPOCH=1793923200` sind byte-identisch.
+- Zwei Builds mit `SOURCE_DATE_EPOCH=1794009600` sind byte-identisch.
+
+  Byte-Identität gilt für dieselbe Plattform/zlib-Version. Der CI-Linux-Build
+  kann andere gzip-Bytes erzeugen; Quelltext, Lockfile und Wheels sind identisch.
+  Der Release-Asset ist der hier geprüfte Windows-Build (`1b043...`).
 
 ## Browser-UI
 
