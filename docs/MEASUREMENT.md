@@ -1,120 +1,115 @@
-# Speicher messen (DS723+)
+# Measuring memory (DS723+)
 
-## Ziel und Einordnung
+## Goal and context
 
-Vorläufiges Entwicklungsziel: **höchstens etwa 50 MiB PSS für alle eigenen
-Prozesse zusammen im Leerlauf**. Das ist eine Zielmarke, keine bereits
-zugesagte Garantie. Die tatsächlichen Werte müssen auf der DS723+ gemessen
-werden.
+Provisional development target: **at most about 50 MiB PSS for all own processes
+combined at idle**. This is a target, not a guaranteed promise. Actual values
+must be measured on the DS723+.
 
-PSS (Proportional Set Size) ist die faire Summe über Prozesse: gemeinsam
-benutzte Seiten werden anteilig gezählt. RSS zählt gemeinsame Seiten in jedem
-Prozess voll und ist deshalb als Summe zu hoch. Der Bericht nennt beide Werte,
-die Zielmarke bezieht sich auf **PSS**.
+PSS (Proportional Set Size) is the fair sum across processes: shared pages are
+counted proportionally. RSS counts shared pages fully in every process and is
+therefore too high as a sum. The report states both values; the target refers to
+**PSS**.
 
-## Werkzeug
+## Tool
 
-`tools/measure_dsm.py` liest `/proc/<pid>/smaps_rollup` und `/proc/<pid>/status`.
-Es benötigt nur die Python-Standardbibliothek und kann mit dem
-SynoCommunity-Interpreter oder einem DSM-System-Python laufen:
+`tools/measure_dsm.py` reads `/proc/<pid>/smaps_rollup` and `/proc/<pid>/status`.
+It needs only the Python standard library and can run with the SynoCommunity
+interpreter or a DSM system Python:
 
 ```bash
-# Einzelmessung
+# Single snapshot
 /var/packages/python313/target/bin/python3 \
   /volume1/OnlyFans/tools/measure_dsm.py snapshot --json
 
-# 30 Sekunden sammeln, alle 2 Sekunden
+# Sample for 30 seconds, every 2 seconds
 /var/packages/python313/target/bin/python3 \
   /volume1/OnlyFans/tools/measure_dsm.py sample --seconds 30 --interval 2
 
-# Aktive Arbeit: kurze Abtastung
+# Active work: short sampling
 /var/packages/python313/target/bin/python3 \
   /volume1/OnlyFans/tools/measure_dsm.py sample --seconds 20 --interval 0.5 --json
 ```
 
-Das Skript findet Prozesse anhand der Kommandozeile:
+The script finds processes by command line:
 
-- `ofdl.dsm.service` → Steuerdienst
-- `ofdl.dsm.worker` → kurzfristiger Worker
+- `ofdl.dsm.service` → control service
+- `ofdl.dsm.worker` → short-lived worker
 
-Es zählt nur diese Prozesse, keine Browser, kein DSM und keine anderen Pakete.
-Kopiere `tools/measure_dsm.py` dazu auf das NAS (z. B. per File Station in die
-Freigabe) oder führe es aus dem entpackten Quelltext aus. Für den normalen
-Betrieb ist das nicht nötig.
+It counts only these processes, no browser, no DSM and no other packages. Copy
+`tools/measure_dsm.py` to the NAS for this (e.g. via File Station into the share)
+or run it from the unpacked source. This is not needed for normal operation.
 
-Alternativ liefert die Oberfläche unter **Übersicht → Dienst → Speicher**
-bereits PSS/RSS des Steuerdienstes und des aktiven Workers (sofern `/proc`
-verfügbar ist).
+Alternatively the interface shows PSS/RSS of the control service and the active
+worker under **Overview → Service → Memory** (if `/proc` is available).
 
-## Messbedingungen dokumentieren
+## Document measurement conditions
 
-Für jede Messung notieren:
+For each measurement record:
 
-- Datum/Uhrzeit, DSM-Version, Modell (DS723+), RAM-Ausstattung
-- Anzahl laufender Pakete und ob der Browser geöffnet ist
-- Bibliotheksgröße (Dateien, GiB) und Speichertyp (HDD/SSD/NVMe)
-- ob ein Auftrag lief, welcher Typ und wie viele Dateien/Medien
-- Netzwerk (LAN, Proxy, VPN) und Sitzungszustand
-- Dauer der Leerlaufphase vor der Messung (mindestens 5 Minuten)
+- date/time, DSM version, model (DS723+), RAM configuration
+- number of running packages and whether the browser is open
+- library size (files, GiB) and storage type (HDD/SSD/NVMe)
+- whether a job was running, which type and how many files/media
+- network (LAN, proxy, VPN) and session state
+- duration of the idle period before measurement (at least 5 minutes)
 
-## Empfohlene Sequenz
+## Recommended sequence
 
-1. **Nach dem Start**: Paket starten, 5 Minuten warten, keine Oberfläche öffnen.
-   `sample --seconds 30 --interval 2` ausführen.
-2. **Mit geöffneter Oberfläche**: Browser auf der Übersicht, 2 Minuten warten,
-   dann 30 Sekunden messen. Zusätzlich `tools/dsm_http_check.py --open-ui`
-   ausführen, um alle UI-Ressourcen einmal zu laden.
-3. **Großer Auftrag**: „Alle aktiven Abonnements“, alle Kategorien und Typen,
-   vorhandene Bibliothek. Während des Laufs 20–60 Sekunden mit
-   `--interval 0.5` messen. Spitzenwerte notieren.
-4. **Abbruch**: Auftrag abbrechen, 30 Sekunden warten (Worker muss beendet sein),
-   erneut im Leerlauf messen.
-5. **Mehrere Durchläufe**: Sequenz 2–4 dreimal wiederholen. Prüfen, ob PSS/RSS
-   nach jedem Lauf zum Ausgangswert zurückkehrt.
-6. **Update/Neustart**: NAS neu starten, nach dem Start erneut messen.
-   Sicherstellen, dass keine verwaisten Worker-Prozesse übrig bleiben
-   (`ps`/`measure_dsm.py` zeigt nur einen Dienst, keinen Worker im Leerlauf).
+1. **After start**: start the package, wait 5 minutes, do not open the interface.
+   Run `sample --seconds 30 --interval 2`.
+2. **With the interface open**: browser on Overview, wait 2 minutes, then measure
+   for 30 seconds. Additionally run `tools/dsm_http_check.py --open-ui` to load
+   all UI resources once.
+3. **Large job**: “All active subscriptions”, all categories and types, existing
+   library. During the run measure for 20–60 seconds with `--interval 0.5`.
+   Record peak values.
+4. **Cancellation**: cancel the job, wait 30 seconds (the worker must have
+   exited), measure idle again.
+5. **Multiple runs**: repeat sequence 2–4 three times. Check whether PSS/RSS
+   returns to the starting value after each run.
+6. **Update/restart**: restart the NAS, measure again after start. Ensure no
+   orphaned worker processes remain (`ps`/`measure_dsm.py` shows only one service,
+   no worker at idle).
 
-## Ergebnistabelle (auf dem NAS auszufüllen)
+## Results table (to fill in on the NAS)
 
-| Zustand | Prozesse | PSS gesamt (MiB) | RSS gesamt (MiB) | Spitze Worker (MiB) | Bedingungen |
+| State | Processes | Total PSS (MiB) | Total RSS (MiB) | Worker peak (MiB) | Conditions |
 | --- | ---: | ---: | ---: | ---: | --- |
-| Nach Start, 5 min idle |  |  |  | – |  |
-| Oberfläche offen, 2 min |  |  |  | – |  |
-| Großer Auftrag läuft |  |  |  |  |  |
-| Nach Abbruch, 30 s |  |  |  | – |  |
-| Nach 3 Durchläufen |  |  |  | – |  |
-| Nach NAS-Neustart |  |  |  | – |  |
+| After start, 5 min idle |  |  |  | – |  |
+| Interface open, 2 min |  |  |  | – |  |
+| Large job running |  |  |  |  |  |
+| After cancellation, 30 s |  |  |  | – |  |
+| After 3 runs |  |  |  | – |  |
+| After NAS restart |  |  |  | – |  |
 
-## Lokale Vergleichsmessung (nicht DSM)
+## Local reference measurement (not DSM)
 
-Diese Werte wurden in der Build-Umgebung unter Windows gemessen. Sie sind
-**kein DSM-Nachweis**; PSS ist unter Windows nicht verfügbar. Der
-venv-Launcher ist ein zusätzlicher kleiner Prozess, den es unter Linux nicht
-gibt.
+These values were measured in the build environment under Windows. They are
+**not DSM proof**; PSS is not available under Windows. The venv launcher is an
+additional small process that does not exist under Linux.
 
-| Zustand | Prozesse | RSS | Private |
+| State | Processes | RSS | Private |
 | --- | --- | ---: | ---: |
-| Steuerdienst nach Start | Dienst + Launcher | 33,0 MiB | 18,5 MiB |
-| Steuerdienst, UI-Ressourcen geladen | Dienst + Launcher | 33,6 MiB | 18,9 MiB |
-| Nach 5 Vorschau-Aufträgen | Dienst + Launcher | 33,9 MiB | 19,0 MiB |
-| Streaming-Worker, 256 MiB Testdownload | Worker + Launcher | **37,3 MiB Peak** | 28,2 MiB |
-| Import-Baseline Download-Worker | Worker + Launcher | 39,6 MiB | 28,0 MiB |
-| Import-Baseline Preview-Worker | Worker + Launcher | 26,0 MiB | 14,3 MiB |
+| Control service after start | service + launcher | 33.0 MiB | 18.5 MiB |
+| Control service, UI resources loaded | service + launcher | 33.6 MiB | 18.9 MiB |
+| After 5 preview jobs | service + launcher | 33.9 MiB | 19.0 MiB |
+| Streaming worker, 256 MiB test download | worker + launcher | **37.3 MiB peak** | 28.2 MiB |
+| Import baseline download worker | worker + launcher | 39.6 MiB | 28.0 MiB |
+| Import baseline preview worker | worker + launcher | 26.0 MiB | 14.3 MiB |
 
-Der 256-MiB-Test verwendet den echten `run_downloads`-Pfad mit Manifest,
-Byte-Range-/Längenprüfung, 256-KiB-Chunks und einer lokalen HTTP-Quelle; nur die
-Host-/Portprüfung wurde für die lokale Messung gelockert. Der Peak zeigt, dass
-die Streaming-Engine die Datei nicht in den Speicher lädt.
+The 256 MiB test uses the real `run_downloads` path with manifest,
+byte-range/length checks, 256 KiB chunks and a local HTTP source; only the
+host/port check was relaxed for the local measurement. The peak shows that the
+streaming engine does not load the file into memory.
 
-## Was die Zahlen nicht aussagen
+## What the numbers do not say
 
-- Ein einzelner Peak sagt nichts über Langzeitstabilität bei 80.000 Dateien.
-- Der LegacyIndex kann beim ersten Lauf für einen Creator zusätzlichen Speicher
-  benötigen, wenn exakte Pfade fehlen. Das ist ein Worker-Spitzenwert, kein
-  Dauerzustand; der Worker endet nach dem Auftrag.
-- Die tatsächliche Netzwerkgeschwindigkeit, TLS-Impersonation und
-  Cloudflare-Antworten können die Laufzeit, nicht den Grundspeicherbedarf,
-  verändern.
-- Ohne echte Sitzung kann kein echter Mediendownload gemessen werden. Der
-  Testbericht kennzeichnet diese Lücke ausdrücklich.
+- A single peak says nothing about long-term stability with 80,000 files.
+- LegacyIndex may need additional memory on the first run for a creator when
+  exact paths are missing. That is a worker peak, not a permanent state; the
+  worker exits after the job.
+- Actual network speed, TLS impersonation and Cloudflare responses can change
+  runtime, not base memory usage.
+- Without a real session no real media download can be measured. The test report
+  explicitly marks this gap.

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>OnlyFans DL pour Synology DSM</title>
+  <meta name="description" content="Paquet de téléchargement OnlyFans natif pour Synology DSM 7.2 avec une petite interface web et un environnement Python privé.">
+  <link rel="stylesheet" href="../site.css">
+</head>
+<body>
+  <header class="site">
+    <div class="wrap nav">
+      <div class="brand"><span class="logo">OF</span><span>OnlyFans DL <span style="color:var(--muted);font-weight:500">pour DSM</span></span></div>
+      <span class="spacer"></span>
+      <a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader">GitHub</a>
+      <nav class="langs" aria-label="Langue">
+        <a href="../index.html" hreflang="en">EN</a>
+        <a href="../de/index.html" hreflang="de">DE</a>
+        <a href="index.html" hreflang="fr" aria-current="page">FR</a>
+        <a href="../es/index.html" hreflang="es">ES</a>
+        <a href="../it/index.html" hreflang="it">IT</a>
+        <a href="../nl/index.html" hreflang="nl">NL</a>
+        <a href="../pt/index.html" hreflang="pt">PT</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div class="eyebrow">Paquet Synology DSM natif</div>
+        <h1>Votre bibliothèque, directement sur le NAS.</h1>
+        <p class="lead">Un paquet DSM 7.2 natif pour le téléchargeur OnlyFans. Il installe un environnement
+          Python 3.13 privé et lance une petite interface web sur le NAS. Téléchargements, analyses
+          d’abonnements et aperçus s’exécutent dans un processus de travail séparé et de courte durée.</p>
+        <div class="actions">
+          <a class="btn primary" href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/releases/latest">Télécharger le .spk</a>
+          <a class="btn" href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader">Code source</a>
+          <a class="btn" href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/INSTALL.md">Guide d’installation (EN)</a>
+        </div>
+        <div class="badges">
+          <span class="badge">DS723+ / r1000</span>
+          <span class="badge">DSM 7.2</span>
+          <span class="badge">Python 3.13</span>
+          <span class="badge">venv privé</span>
+          <span class="badge">GPLv3</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap split">
+        <div>
+          <h2>Fonctionnalités</h2>
+          <div class="grid">
+            <div class="card"><h3>Paquet natif</h3><p>Installation via Package Center. Aucune commande Python, pip ou SSH n’est nécessaire pour l’usage normal.</p></div>
+            <div class="card"><h3>Petit service de contrôle</h3><p>Le service permanent n’utilise que la bibliothèque standard. Les bibliothèques lourdes ne sont chargées que par le processus temporaire.</p></div>
+            <div class="card"><h3>Interface web</h3><p>Import et test de session, sélection de dossier, choix des créateurs, téléchargements, pause/annulation, planification et état.</p></div>
+            <div class="card"><h3>Bibliothèque existante</h3><p>Réutilise les fichiers, l’arborescence, les fichiers <code>.part</code> et le manifeste <code>.ofdl.sqlite3</code> existant.</p></div>
+          </div>
+        </div>
+        <div class="shot"><img src="../dsm-ui-dashboard-fr.png" alt="Tableau de bord OnlyFans DL DSM"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap split">
+        <div>
+          <h2>Installation</h2>
+          <ol class="steps">
+            <li><b>Ajouter la source SynoCommunity.</b><br>Package Center → Paramètres → Sources de paquets → <code>https://packages.synocommunity.com/</code></li>
+            <li><b>Installer le SPK.</b><br>Package Center → Installation manuelle. Python 3.13 est installé comme dépendance.</li>
+            <li><b>Définir le mot de passe web.</b><br>L’assistant demande un mot de passe. Ouvrez ensuite le paquet depuis le menu DSM ou <code>http://&lt;IP-NAS&gt;:8765/</code>.</li>
+            <li><b>Choisir un dossier et importer une session.</b><br>Dans DSM, accordez à <code>sc-onlyfansdl</code> l’accès Lecture/Écriture uniquement au dossier partagé choisi (Permissions → Utilisateur interne système). Enregistrez un chemin de bibliothèque existant dans les paramètres. Aucun dossier partagé n’est créé automatiquement.</li>
+          </ol>
+        </div>
+        <div>
+          <h2>Modèle de sécurité</h2>
+          <p class="note">Le paquet s’exécute avec le compte de service DSM non privilégié <code>sc-onlyfansdl</code>.
+            Il ne demande ni root ni appartenance au groupe administrateurs. L’interface web possède son propre mot de passe ;
+            ce n’est pas le SSO DSM. La session est stockée en mode <code>0600</code> et n’est jamais écrite dans les paramètres ou journaux.</p>
+          <p style="color:var(--muted);font-size:.9rem;margin-top:14px">
+            Pour l’accès distant, placez le reverse proxy HTTPS de DSM devant le port 8765. N’exposez pas ce port directement sur Internet.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Stockage et compatibilité</h2>
+        <div class="grid">
+          <div class="card"><h3>Bibliothèque</h3><p>Un seul chemin enregistré explicitement dans les paramètres pour les téléchargements, la bibliothèque et la planification. Les fichiers restent en place. Une mise à jour demande de confirmer le chemin ; les anciens dossiers partagés ne sont pas supprimés.</p></div>
+          <div class="card"><h3>Mémoire</h3><p>Le service de contrôle reste petit. Le processus de travail se termine après chaque tâche. L’objectif de 50 MiB PSS au repos n’a pas encore été vérifié sur le DS723+.</p></div>
+          <div class="card"><h3>Planification</h3><p>Une heure quotidienne peut lancer les paramètres de téléchargement enregistrés. Une seule tâche s’exécute à la fois.</p></div>
+          <div class="card"><h3>Langue et connexion</h3><p>Sept langues d’interface, dont les textes principaux en italien, néerlandais et portugais. Le mode Auto utilise la langue DSM disponible puis le navigateur ; le choix manuel est prioritaire. Les textes manquants reviennent à l’anglais/allemand. La session survit au rechargement et à la mise à jour.</p></div>
+          <div class="card"><h3>État et reprise</h3><p>Le rechargement restaure la tâche en cours et les derniers événements. Analyse et transfert de fichier ont des indicateurs séparés. Les erreurs API temporaires affichent une attente de trois minutes, annulable.</p></div>
+          <div class="card"><h3>Free &amp; Trials</h3><p>Recherche en lecture seule et réabonnements quotidiens optionnels uniquement pour des profils explicitement autorisés et revérifiés comme gratuitement permanents. Les essais restent à valider sur le site en raison d’un renouvellement payant possible. Un changement de prix entre la vérification et la réponse ne peut pas être totalement exclu.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Documentation</h2>
+        <div class="grid">
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/README.md">README</a></h3><p>Vue d’ensemble, installation et notes de version (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/INSTALL.md">Installation</a></h3><p>Configuration DSM pas à pas, consentement de stockage et dépannage (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/ARCHITECTURE.md">Architecture</a></h3><p>Service de contrôle, processus de travail, tâches SQLite et permissions (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/TEST_REPORT.md">Rapport de test</a></h3><p>Résultats locaux et liste de vérification matérielle DSM (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/SECURITY.md">Sécurité</a></h3><p>Gestion de session, exposition et réinitialisation (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/RELIABILITY.md">Fiabilité</a></h3><p>Reconnexion, arrêt complet et limites du réabonnement gratuit (EN).</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      Client non officiel. Utilisez uniquement votre propre compte et les contenus que vous êtes autorisé à enregistrer.
+      Aucun contournement DRM, aucune automatisation d’achat et aucun contournement de sécurité.
+      <a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader">GitHub</a>
+      · <a href="../index.html">English</a> · <a href="../de/index.html">Deutsch</a> · <a href="../es/index.html">Español</a>
+      · <a href="../it/index.html">Italiano</a> · <a href="../nl/index.html">Nederlands</a> · <a href="../pt/index.html">Português</a>
+    </div>
+  </footer>
+</body>
+</html>

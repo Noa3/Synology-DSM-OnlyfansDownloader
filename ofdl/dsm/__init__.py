@@ -7,7 +7,7 @@ belong to the short-lived worker process.  See ``docs/ARCHITECTURE.md``.
 from __future__ import annotations
 
 SERVICE_VERSION = '2.8.0'
-PACKAGE_REVISION = '5'
+PACKAGE_REVISION = '6'
 PACKAGE_VERSION = f'{SERVICE_VERSION}-{PACKAGE_REVISION}'
 DEFAULT_PORT = 8765
 DEFAULT_SHARE_NAME = 'OnlyFansDL'

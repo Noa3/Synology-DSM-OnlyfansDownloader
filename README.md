@@ -1,179 +1,175 @@
-# OnlyFans DL für Synology DSM
+# OnlyFans DL for Synology DSM
 
-**Deutsch** · [English GitHub Page](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/) · [Deutsche GitHub Page](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/de/)
+**English** · [Deutsch](README_DE.md) · [GitHub Pages](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/)
 
-Nativer Downloader für Synology DSM 7.2 – **ohne SSH und ohne manuelle Python- oder
-pip-Befehle**. Das Paket bringt eine private Python-Laufzeit mit, installiert alle
-benötigten Bibliotheken offline und startet eine kleine Weboberfläche auf dem NAS.
+A native downloader for Synology DSM 7.2 – **no SSH and no manual Python or pip
+commands**. The package ships a private Python runtime, installs all required
+libraries offline and starts a small web interface on the NAS.
 
-> **Wichtig:** Dies ist ein inoffizieller Client. Verwende nur dein eigenes Konto
-> und nur Inhalte, die du speichern darfst. Das Projekt umgeht keine Zugriffskontrollen,
-> kein DRM und keine Sicherheitsabfragen. Die Live-API kann sich jederzeit ändern.
+> **Important:** This is an unofficial client. Use only your own account and
+> only content you are allowed to save. The project does not bypass access
+> controls, DRM or security challenges. The live API may change at any time.
 
-## Enthalten
+## Contents
 
-- **Natives `.spk`** für DS723+ / DS923+ / DS1522+ (Architektur `r1000`, DSM 7.2).
-- **Private Python-3.13-Umgebung** aus dem SynoCommunity-Paket `python313`.
-  Die DSM-Systemumgebung bleibt unverändert.
-- **Getrennter Steuerdienst und Worker**: Der Steuerdienst bleibt dauerhaft klein;
-  Downloads, Abonnementscans und Vorschaubilder laufen in einem kurzlebigen
-  Arbeitsprozess, der nach Erfolg, Fehler oder Abbruch beendet wird.
-- **Weboberfläche** als statische Browseroberfläche: Anmeldung, Downloadordner,
-  Creator-Auswahl, Kategorien/Filter, Downloadstart, Pause/Abbrechen, Zeitplan,
-  Sitzungsimport, Sitzungstest, Status, Bibliotheksübersicht und Passwortänderung.
-- **Bestehende Bibliotheken bleiben nutzbar**: Dateistruktur, `.part`-Dateien und
-  das SQLite-Manifest `.ofdl.sqlite3` werden unverändert weiterverwendet.
-- **Desktop-App und CLI bleiben im Quelltext erhalten**. Auf dem NAS wird die
-  Weboberfläche verwendet; die Desktop-Tk-Oberfläche ist auf DSM nicht sinnvoll,
-  weil dort kein Display/Tkinter vorhanden ist.
-- **Reproduzierbarer Build** mit gepinnten Wheels und SHA-256-Hashes.
+- **Native `.spk`** for DS723+ / DS923+ / DS1522+ (`r1000` architecture, DSM 7.2).
+- **Private Python 3.13 environment** from the SynoCommunity `python313`
+  package. The DSM system environment remains untouched.
+- **Separate control service and worker**: the control service stays small
+  permanently; downloads, subscription scans and previews run in a short-lived
+  worker process that exits after success, failure or cancellation.
+- **Web interface** as a static browser UI: login, download folder, creator
+  selection, categories/filters, starting downloads, pause/cancel, schedule,
+  session import, session test, status, library overview and password change.
+- **Existing libraries remain usable**: file structure, `.part` files and the
+  `.ofdl.sqlite3` SQLite manifest are reused unchanged.
+- **Desktop app and CLI remain in the source**. On the NAS the web interface is
+  used; the Tk desktop UI is not suitable there because DSM has no display or
+  Tkinter.
+- **Reproducible build** with pinned wheels and SHA-256 hashes.
 
-## Voraussetzungen
+## Requirements
 
-| Komponente | Anforderung |
+| Component | Requirement |
 | --- | --- |
-| NAS | DS723+ (oder ein anderes Modell mit `r1000`), DSM 7.2 |
-| Paketquelle | SynoCommunity: `https://packages.synocommunity.com/` |
-| Laufzeit | SynoCommunity `python313` (3.13.11-9 oder neuer) – wird als Abhängigkeit installiert |
-| Browser | aktueller Chrome, Edge, Firefox oder Safari im LAN |
-| Speicher | ca. 100 MiB für Laufzeit/Wheels, plus Downloads |
+| NAS | DS723+ (or another model with `r1000`), DSM 7.2 |
+| Package source | SynoCommunity: `https://packages.synocommunity.com/` |
+| Runtime | SynoCommunity `python313` (3.13.11-9 or newer) – installed as a dependency |
+| Browser | current Chrome, Edge, Firefox or Safari on the LAN |
+| Storage | about 100 MiB for runtime/wheels, plus downloads |
 
-Die Paketquelle ist nötig, weil Synology selbst kein Python 3.13 für DSM 7.2
-bereitstellt. Die Installation der Laufzeit erfolgt über den Package Manager,
-nicht über SSH.
+The package source is required because Synology itself does not provide Python
+3.13 for DSM 7.2. The runtime is installed through Package Center, not SSH.
 
 ## Installation
 
-1. **SynoCommunity-Paketquelle hinzufügen** (einmalig):
-   Package Center → Einstellungen → Paketquellen → Hinzufügen
+1. **Add the SynoCommunity package source** (one time):
+   Package Center → Settings → Package Sources → Add
    - Name: `SynoCommunity`
-   - Ort: `https://packages.synocommunity.com/`
-   - Die Quelle muss vertrauenswürdig sein; DSM zeigt ggf. einen Hinweis.
-2. **`OnlyFansDL-r1000-dsm72_2.8.0-5.spk` herunterladen** (Release-Seite dieses
-   Repositories) und in Package Center → Manuell installieren auswählen.
-3. Package Center installiert **Python 3.13 automatisch** als Abhängigkeit.
-   Falls die Laufzeit fehlt, zuerst `Python 3.13` aus SynoCommunity installieren.
-4. Im Installationsdialog ein **Web-Passwort** (mindestens 10 Zeichen) festlegen.
-   Es wird nur auf dem NAS gespeichert.
-5. Nach der Installation **OnlyFans DL** im DSM-Hauptmenü öffnen oder
-   `http://<NAS-IP>:8765/` aufrufen und mit dem Passwort anmelden.
-6. In DSM **Systemsteuerung → Gemeinsamer Ordner → gewünschte Freigabe →
-   Bearbeiten → Berechtigungen → Systeminterner Benutzer** dem Konto
-   `sc-onlyfansdl` **Lesen/Schreiben** erlauben. Dann in der App unter
-   **Einstellungen → Bibliothekspfad** einen vorhandenen Ordner auswählen und
-   **Pfad speichern**. Downloads, Bibliothek und Zeitplan verwenden diesen Pfad.
-   **Keine Freigaben werden automatisch angelegt oder berechtigt.** Auch nach
-   dem Upgrade von 2.8.0-3 muss der gewünschte Pfad einmal bestätigt werden.
-7. Unter **Sitzung** eine eingeloggte OnlyFans-API-Anfrage einfügen
-   (cURL, HAR, JSON oder Roh-Header), **Importieren** und **Sitzung testen**.
-8. Creator auswählen (manuell oder „Alle aktiven Abonnements“), Filter setzen und
-   **Download starten**.
+   - Location: `https://packages.synocommunity.com/`
+   - The source must be trusted; DSM may show a notice.
+2. **Download `OnlyFansDL-r1000-dsm72_2.8.0-6.spk`** (from this repository's
+   releases) and choose Package Center → Manual Install.
+3. Package Center installs **Python 3.13 automatically** as a dependency. If the
+   runtime is missing, install `Python 3.13` from SynoCommunity first.
+4. In the install wizard, set a **web password** (at least 10 characters). It is
+   stored only on the NAS.
+5. After installation, open **OnlyFans DL** from the DSM main menu or visit
+   `http://<NAS-IP>:8765/` and sign in with that password.
+6. In DSM, open **Control Panel → Shared Folder → the desired share → Edit →
+   Permissions → System internal user** and grant `sc-onlyfansdl`
+   **Read/Write**. Then in the app open **Settings → Library path**, choose an
+   existing folder and **Save path**. Downloads, library and schedule use this
+   path. **No shared folders are created or granted automatically.** After an
+   upgrade from 2.8.0-3 the path must be confirmed once.
+7. Under **Session**, paste a request from your logged-in OnlyFans browser
+   (cURL, HAR, JSON or raw headers), click **Import**, then **Test session**.
+8. Select creators (manually or “All active subscriptions”), choose filters and
+   click **Start download**.
 
-### Keine Kommandozeile nötig
+### No command line required
 
-Der normale Ablauf verwendet ausschließlich DSM Package Center und die
-Weboberfläche. Python, pip, venv und die Wheels werden vom Paket installiert.
-SSH ist nur für die optionale Speicher-/Diagnosemessung nötig (siehe
-`docs/MEASUREMENT.md`), nicht für Installation oder Betrieb.
+Normal use relies only on DSM Package Center and the web interface. Python, pip,
+venv and the wheels are installed by the package. SSH is needed only for the
+optional memory/diagnostics measurement (see `docs/MEASUREMENT.md`), not for
+installation or operation.
 
-## Sprachen
+## Languages
 
-- **Weboberfläche:** Deutsch, Englisch, Französisch, Spanisch sowie Kerntexte
-  auf Italienisch, Niederländisch und Portugiesisch. Nicht übersetzte Hilfe-/
-  technische Texte fallen auf Englisch bzw. Deutsch zurück.
-- **Auto · DSM / Browser:** Unterstützter DSM-Sprachhinweis/lesbarer Sprachcookie,
-  sonst lesbare DSM-Systemsprache, sonst Browser. Die persönliche DSM-Sprache
-  ist im separaten Browserfenster nicht immer verfügbar. Manuelle Auswahl
-  überschreibt Auto und wird im Browser gespeichert.
-- **GitHub Pages:** [Englisch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/)
-  und [Deutsch](https://noa3.github.io/Synology-DSM-OnlyfansDownloader/de/).
-- **Dokumentation:** Diese README ist deutsch; die Installations- und
-  Architekturtexte liegen unter `docs/`.
+- **Web interface:** German, English, French, Spanish, plus Italian, Dutch and
+  Portuguese core texts. Untranslated help/technical text falls back to
+  English or German.
+- **Auto · DSM / Browser:** uses a supported DSM language hint or readable
+  language cookie, otherwise the readable DSM system language, otherwise the
+  browser. The individual DSM user language is not always available to a
+  standalone window. A manual choice overrides Auto and is stored in the browser.
+- **GitHub Pages:** English (default), German, French, Spanish, Italian, Dutch
+  and Portuguese.
+- **Documentation:** English is the default. German versions are available as
+  `*_DE.md`.
 
-## Wo liegen die Daten?
+## Where is the data?
 
-| Daten | Ort |
+| Data | Location |
 | --- | --- |
-| Downloads, `.part`, Manifest `.ofdl.sqlite3` | gewählter Ordner, z. B. `/volume1/OnlyFans` |
-| Steuerdatenbank, Aufträge, Einstellungen | `/var/packages/OnlyFansDL/var/data/control.sqlite3` |
-| Sitzung (0600) | `/var/packages/OnlyFansDL/var/data/session.json` |
-| Python-Umgebung | `/var/packages/OnlyFansDL/var/venv` |
-| Protokolle | `/var/packages/OnlyFansDL/var/logs/` |
-| Vorschaubilder | `/var/packages/OnlyFansDL/var/data/previews/` |
+| Downloads, `.part`, manifest `.ofdl.sqlite3` | chosen folder, e.g. `/volume1/OnlyFans` |
+| Control database, jobs, settings | `/var/packages/OnlyFansDL/var/data/control.sqlite3` |
+| Session (0600) | `/var/packages/OnlyFansDL/var/data/session.json` |
+| Python environment | `/var/packages/OnlyFansDL/var/venv` |
+| Logs | `/var/packages/OnlyFansDL/var/logs/` |
+| Previews | `/var/packages/OnlyFansDL/var/data/previews/` |
 
-Beim Deinstallieren werden die privaten Steuerdaten und die venv entfernt.
-**Gewählte Bibliotheken und alle Downloads bleiben erhalten.** Ein Update
-behält Einstellungen, Sitzung und die venv bei und installiert nur geänderte
-Wheels nach.
+Uninstalling removes the private control data and the venv. **Chosen libraries
+and all downloads remain.** An update keeps settings, session and venv and only
+installs changed wheels.
 
-## Sitzungen, Status und Free & Trials
+## Sessions, status and Free & Trials
 
-- Die OnlyFans-Sitzung bleibt nach Seitenreload, Paketneustart und Upgrade in
-  `var/data/session.json` gespeichert (0600, nicht verschlüsselt). OnlyFans kann
-  sie widerrufen/ablaufen lassen; sie wird nicht automatisch erneuert. Die
-  separate Web-Anmeldung läuft nach 12 Stunden ab bzw. beim Dienstneustart.
-- Aktiver/letzter Auftrag und letzte Ereignisse werden nach Reload wieder geladen.
-  Verbindungsprobleme löschen die Anzeige nicht und starten keine zweite Arbeit.
-- Während der Suche ist der Gesamtumfang unbekannt; Gesamtablauf und aktuelle
-  Datei haben getrennte Balken. Vollständige Fehler sind im Auftrag sichtbar.
-- Vorübergehende API-Lesefehler warten auf DSM mindestens 180 Sekunden vor dem
-  nächsten Versuch; längeres Retry-After wird bis 300 Sekunden respektiert,
-  darüber wird gestoppt. 401/Authentifizierungsfehler brauchen eine neue Sitzung;
-  Sicherheitsabfragen werden nicht umgangen. Keine automatischen POST-Retries.
-- **Free & Trials:** Angebote lesend suchen. Nur ausdrücklich aufgelistete,
-  unmittelbar erneut als dauerhaft kostenlos geprüfte Profile können automatisch
-  abonniert werden. Tägliche Automatik ist standardmäßig aus und kontogebunden.
-  Trials bleiben wegen möglicher späterer Gebühren zur Prüfung auf der Website.
-  Preisänderungen zwischen Prüfung und Serverantwort sind nicht atomar sperrbar.
-- **DSM Stoppen:** Eigene Worker-Prozessgruppen samt Kindern werden beendet;
-  PID-Identität wird geprüft, eine fehlende Service-PID-Datei kann rekonstruiert
-  werden. Linux-Prozesstests und der noch ausstehende DSM-Test sind getrennt.
+- The OnlyFans session remains in `var/data/session.json` (0600, not encrypted)
+  across page reloads, package restarts and upgrades. OnlyFans can revoke or
+  expire it; it is not renewed automatically. The separate web login expires
+  after 12 hours or when the service restarts.
+- The active/latest job and recent events are restored after a reload.
+  Connection problems do not clear the display and do not start a second job.
+- While scanning, the total size is unknown; overall progress and current-file
+  progress use separate bars. Full errors are visible in the job card.
+- Temporary API read failures on DSM wait at least 180 seconds before the next
+  attempt; a longer `Retry-After` is honored up to 300 seconds, above that the
+  run stops. 401/authentication failures need a fresh session; security
+  challenges are not bypassed. No automatic POST retries.
+- **Free & Trials:** discover offers read-only. Only explicitly listed profiles
+  that are immediately rechecked as permanently free can be subscribed
+  automatically. The daily automation is off by default and account-bound.
+  Trials remain for review on the website because later fees are possible.
+  A price change between check and server response cannot be made atomic.
+- **DSM Stop:** owned worker process groups including children are terminated;
+  PID identity is checked and a missing service PID file can be reconstructed.
+  Linux process tests and the pending DSM test are separate.
 
 Details: [`docs/RELIABILITY.md`](docs/RELIABILITY.md).
 
-## Speicherverbrauch
+## Memory usage
 
-Im Leerlauf läuft **nur** der Steuerdienst. Er importiert ausschließlich die
-Python-Standardbibliothek; `requests`, `curl_cffi`, Pillow und der Download-Kern
-werden erst im Worker geladen. Der Worker wird für jeden Auftrag neu gestartet
-und beendet sich danach.
+At idle **only** the control service runs. It imports only the Python standard
+library; `requests`, `curl_cffi`, Pillow and the download core are loaded only in
+the worker. The worker is restarted for each job and exits afterwards.
 
-Gemessene lokale Vergleichswerte (Windows, nur als Indiz; **PSS ist dort nicht
-verfügbar**):
+Measured local reference values (Windows, indicative only; **PSS is not available
+there**):
 
-| Zustand | Prozesse | RSS | Private |
+| State | Processes | RSS | Private |
 | --- | --- | ---: | ---: |
-| Steuerdienst nach Start | Dienst + venv-Launcher | ca. 33 MiB | ca. 18 MiB |
-| Steuerdienst mit geöffneter Oberfläche | Dienst + Launcher | ca. 34 MiB | ca. 19 MiB |
-| Streaming-Worker, 256 MiB Testdownload | Worker + Launcher | **Peak ca. 37 MiB** | ca. 28 MiB |
+| Control service after start | service + venv launcher | approx. 33 MiB | approx. 18 MiB |
+| Control service with UI open | service + launcher | approx. 34 MiB | approx. 19 MiB |
+| Streaming worker, 256 MiB test download | worker + launcher | **peak approx. 37 MiB** | approx. 28 MiB |
 
-Auf DSM wird PSS mit `tools/measure_dsm.py` gemessen. Das vorläufige Ziel
-**≤ 50 MiB PSS für alle eigenen Prozesse im Leerlauf** ist auf der DS723+ noch
-zu bestätigen; es ist keine bereits zugesagte Garantie. Die Messsequenz und die
-Bedingungen stehen in `docs/MEASUREMENT.md`.
+On DSM, PSS is measured with `tools/measure_dsm.py`. The provisional target
+**≤ 50 MiB PSS for all own processes at idle** still has to be confirmed on the
+DS723+; it is not a guaranteed promise. The measurement sequence and conditions
+are in `docs/MEASUREMENT.md`.
 
-## Reproduzierbarer Build
+## Reproducible build
 
 ```bash
-# 1) Wheels für CPython 3.13 / manylinux2014 x86_64 laden und hashen
+# 1) Download and hash wheels for CPython 3.13 / manylinux2014 x86_64
 python tools/fetch_wheels.py
 
-# 2) SPK bauen (deterministisch; SOURCE_DATE_EPOCH ist fest)
+# 2) Build the SPK (deterministic; SOURCE_DATE_EPOCH is fixed)
 python tools/build_spk.py
 
-# Ergebnis
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-5.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-5.spk.sha256
+# Result
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-6.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-6.spk.sha256
 ```
 
-Der Build benötigt keinen Synology-Toolchain und kein Linux. Die Wheels werden aus
-PyPI für die Zielplattform geladen und mit SHA-256 im Lockfile festgehalten. Ein
-zweiter Build mit demselben `SOURCE_DATE_EPOCH` erzeugt auf derselben Plattform
-byte-identische Dateien; der Inhalt (Quelltext, Lockfile, Wheels) ist auch zwischen
-Windows und Linux identisch, die gzip-Komprimierung kann sich jedoch zwischen
-zlib-Versionen unterscheiden. Der Release-Asset ist der lokal geprüfte Windows-Build;
-CI baut zusätzlich ein inhaltsgleiches Linux-Artefakt. `tests/test_dsm_package.py`
-prüft die Byte-Identität zweier Builds auf derselben Plattform.
+The build needs no Synology toolchain and no Linux. Wheels are downloaded from
+PyPI for the target platform and pinned with SHA-256 in the lock file. A second
+build with the same `SOURCE_DATE_EPOCH` produces byte-identical files on the
+same platform; content (source, lock file, wheels) is identical between Windows
+and Linux, although gzip compression can differ between zlib versions. The
+release asset is the locally tested Windows build; CI additionally builds a
+content-identical Linux artifact. `tests/test_dsm_package.py` checks byte
+identity of two builds on the same platform.
 
 ## Tests
 
@@ -181,53 +177,53 @@ prüft die Byte-Identität zweier Builds auf derselben Plattform.
 python -m unittest discover -s tests -v
 ```
 
-Die vollständige Suite umfasst die vorhandenen Desktop-/CLI-Tests und die neuen
-DSM-Tests (Datenbank, Sicherheit, API, Worker, Paketaufbau). Ergebnisse und die
-klare Trennung zwischen „lokal geprüft“ und „auf DSM-Hardware geprüft“ stehen in
-`TEST_REPORT.md`.
+The full suite covers the existing desktop/CLI tests and the DSM tests (database,
+security, API, worker, package layout). Results and the clear distinction between
+“tested locally” and “tested on DSM hardware” are in `TEST_REPORT.md`.
 
-## Sicherheit und Grenzen
+## Security and limits
 
-- Die Oberfläche läuft standardmäßig über **HTTP auf Port 8765** im LAN. Für
-  Zugriff von außen einen DSM-Reverse-Proxy mit HTTPS verwenden; die Anmeldung
-  ist ein eigenes Passwort, keine DSM-SSO-Anmeldung.
-- Die Sitzungsdatei ist `0600` und enthält nur die importierten Header/Cookies.
-  Sie wird nicht in Einstellungen, Auftragsdaten oder Protokollen abgelegt.
-- Das Paket läuft als eigener DSM-Dienstbenutzer `sc-onlyfansdl` und fordert
-  **keine** root- oder Administratorgruppen-Rechte an. Der Benutzer gibt nur die
-  selbst gewählte Freigabe für dieses Konto frei; andernfalls meldet die
-  Oberfläche einen Berechtigungsfehler. Alte automatisch angelegte Freigaben
-  werden nicht gelöscht und ohne erneute Pfadbestätigung nicht verwendet.
-- Kein DRM-Bypass, keine Kaufautomatisierung, keine Umgehung von Cloudflare-
-  oder sonstigen Sicherheitsabfragen.
-- Die Live-API-Kompatibilität wurde in dieser Build-Umgebung **nicht** mit einem
-  echten Konto getestet. Ein Sitzungstest auf dem NAS ist erforderlich.
+- The interface runs over **HTTP on port 8765** on the LAN by default. For
+  external access use a DSM reverse proxy with HTTPS; the login is its own
+  password, not DSM single sign-on.
+- The session file is `0600` and contains only imported headers/cookies. It is
+  not stored in settings, job data or logs. File permissions do not protect it
+  from NAS administrators/root or a compromised NAS.
+- The package runs as its own DSM service user `sc-onlyfansdl` and requests
+  **no** root or administrator group rights. The user grants only the chosen
+  share to this account; otherwise the interface reports a permission error.
+  Old automatically created shares are not deleted and are not used without a
+  new path confirmation.
+- No DRM bypass, no purchase automation, no bypass of Cloudflare or other
+  security challenges.
+- Live API compatibility was **not** tested with a real account in this build
+  environment. A session test on the NAS is required.
 
-## DSM-Fenster und vereinfachter Login
+## DSM window and simplified login
 
-Ein Fenster im DSM-Desktop ist grundsätzlich möglich, braucht aber eine
-HTTPS-/Same-Origin-Integration. Einfaches Einbetten von HTTP-Port 8765 würde
-bei HTTPS-DSM an Mixed Content und dem Klickschutz scheitern. **2.8.0-5 öffnet
-weiterhin die Browseroberfläche**; Sicherheitsheader werden nicht abgeschaltet.
+A window inside the DSM desktop is generally possible but needs an HTTPS /
+same-origin integration. Simple embedding of HTTP port 8765 would fail on
+HTTPS DSM due to mixed content and click protection. **2.8.0-6 still opens the
+browser interface**; security headers are not disabled.
 
-Die Sitzung lässt sich geführt per cURL-Text oder HAR/JSON-Dateiauswahl
-importieren. Dateiauswahl allein sendet nichts; erst **Importieren** überträgt
-die Sitzung. Ein OnlyFans-Fenster lässt sich nicht aus einer NAS-Webseite
-auslesen (Same-Origin/HttpOnly). Kein Passwort oder Zwei-Faktor-Code wird vom
-Downloader abgefragt. Optionen für spätere Browser-Helfer stehen in
+The session can be imported with a guided cURL text or a HAR/JSON file picker.
+Selecting a file alone sends nothing; only **Import** transfers the session. An
+OnlyFans window cannot be read from a NAS web page (same-origin/HttpOnly). The
+downloader never asks for your password or two-factor code. Options for a future
+browser helper are described in
 [`docs/DSM_INTEGRATION.md`](docs/DSM_INTEGRATION.md).
 
-## Lizenz
+## License
 
-Der Anwendungskern und dieses Paket stehen unter der **GNU General Public
-License v3** (siehe `LICENSE`). Die mitgelieferten Python-Wheels behalten ihre
-jeweiligen Lizenzen; siehe `THIRD_PARTY_NOTICES.md`.
+The application core and this package are licensed under the **GNU General
+Public License v3** (see `LICENSE`). Bundled Python wheels keep their respective
+licenses; see `THIRD_PARTY_NOTICES.md`.
 
 ## Links
 
-- Quelltext / Releases:
+- Source / releases:
   <https://github.com/Noa3/Synology-DSM-OnlyfansDownloader>
-- Ursprüngliche Desktop-Anwendung:
+- Original desktop application:
   <https://github.com/Noa3/onlyfans-dl-2>
 - SynoCommunity:
   <https://synocommunity.com/>

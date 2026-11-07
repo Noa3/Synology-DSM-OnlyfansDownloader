@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = 'OnlyFansDL'
-VERSION = '2.8.0-5'
+VERSION = '2.8.0-6'
 ARCH = 'r1000'
 DSM_MIN = '7.2-64570'
 PORT = '8765'
@@ -203,9 +203,10 @@ def info_text(checksum: str) -> str:
         ('silent_upgrade', 'yes'),
         ('reloadui', 'yes'),
         ('install_dep_packages', 'python313>=3.13.11-9'),
-        ('changelog', '2.8.0-5: Reload-safe job status, separate scan/file progress, '
-                      'automatic DSM/browser language with seven UI languages, opt-in free-page '
-                      'renewals and website-only trial review. No automatic shared folders.'),
+        ('changelog', '2.8.0-6: English-default documentation and seven-language project pages; '
+                      'additional Italian/Dutch/Portuguese dashboard text. 2.8.0-5 added reload-safe '
+                      'status, separate progress, auto language, opt-in free-page renewals and '
+                      'website-only trial review. No automatic shared folders or updater.'),
         ('checksum', checksum),
     ]
     lines = [f'{key}="{value}"' for key, value in values]

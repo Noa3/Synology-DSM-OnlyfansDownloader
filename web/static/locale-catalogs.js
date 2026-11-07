@@ -54,6 +54,12 @@
   const catalogs = window.ofdlLanguages;
   catalogs.it = {}; catalogs.nl = {}; catalogs.pt = {};
   const core = [
+    ['No job is active. Downloads and library scans run in a separate process and exit when finished.', 'Nessuna attività attiva. Download e scansioni usano un processo separato che termina al termine.', 'Geen taak actief. Downloads en bibliotheekscans draaien in een apart proces dat daarna stopt.', 'Nenhuma tarefa ativa. Transferências e análises usam um processo separado que termina no fim.'],
+    ['No events in this session yet.', 'Nessun evento in questa sessione.', 'Nog geen gebeurtenissen in deze sessie.', 'Ainda sem eventos nesta sessão.'],
+    ['No events in this job yet.', 'Nessun evento per questa attività.', 'Nog geen gebeurtenissen voor deze taak.', 'Ainda sem eventos nesta tarefa.'],
+    ['No matches.', 'Nessun risultato.', 'Geen resultaten.', 'Sem resultados.'],
+    ['No subscriptions stored. “Load subscriptions” starts a short job.', 'Nessun abbonamento salvato. “Carica abbonamenti” avvia una breve attività.', 'Geen abonnementen opgeslagen. “Abonnementen laden” start een korte taak.', 'Sem subscrições guardadas. “Carregar subscrições” inicia uma tarefa breve.'],
+    ['Page {page} / {pages} · {total}', 'Pagina {page} / {pages} · {total}', 'Pagina {page} / {pages} · {total}', 'Página {page} / {pages} · {total}'],
     ['Overview', 'Panoramica', 'Overzicht', 'Visão geral'],
     ['Downloads', 'Download', 'Downloads', 'Downloads'],
     ['Session', 'Sessione', 'Sessie', 'Sessão'],

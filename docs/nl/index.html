@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>OnlyFans DL voor Synology DSM</title>
+  <meta name="description" content="Native OnlyFans-downloadpakket voor Synology DSM 7.2 met een kleine webinterface en een privé Python-runtime.">
+  <link rel="stylesheet" href="../site.css">
+</head>
+<body>
+  <header class="site">
+    <div class="wrap nav">
+      <div class="brand"><span class="logo">OF</span><span>OnlyFans DL <span style="color:var(--muted);font-weight:500">voor DSM</span></span></div>
+      <span class="spacer"></span>
+      <a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader">GitHub</a>
+      <nav class="langs" aria-label="Taal">
+        <a href="../index.html" hreflang="en">EN</a>
+        <a href="../de/index.html" hreflang="de">DE</a>
+        <a href="../fr/index.html" hreflang="fr">FR</a>
+        <a href="../es/index.html" hreflang="es">ES</a>
+        <a href="../it/index.html" hreflang="it">IT</a>
+        <a href="index.html" hreflang="nl" aria-current="page">NL</a>
+        <a href="../pt/index.html" hreflang="pt">PT</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div class="eyebrow">Native Synology DSM-pakket</div>
+        <h1>Je bibliotheek, direct op de NAS.</h1>
+        <p class="lead">Een native DSM 7.2-pakket voor de OnlyFans-downloader. Het installeert een privé
+          Python 3.13-runtime en start een kleine webinterface op de NAS. Downloads, abonnementsscans
+          en previews draaien in een apart, kortstondig workerproces.</p>
+        <div class="actions">
+          <a class="btn primary" href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/releases/latest">.spk downloaden</a>
+          <a class="btn" href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader">Broncode</a>
+          <a class="btn" href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/INSTALL.md">Installatiehandleiding (EN)</a>
+        </div>
+        <div class="badges">
+          <span class="badge">DS723+ / r1000</span>
+          <span class="badge">DSM 7.2</span>
+          <span class="badge">Python 3.13</span>
+          <span class="badge">Privé venv</span>
+          <span class="badge">GPLv3</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap split">
+        <div>
+          <h2>Wat het doet</h2>
+          <div class="grid">
+            <div class="card"><h3>Native pakket</h3><p>Installatie via Package Center. Voor normaal gebruik zijn geen handmatige Python-, pip- of SSH-stappen nodig.</p></div>
+            <div class="card"><h3>Kleine controledienst</h3><p>De permanente dienst gebruikt alleen de standaardbibliotheek. Zware bibliotheken worden alleen door de tijdelijke worker geladen.</p></div>
+            <div class="card"><h3>Webinterface</h3><p>Sessie importeren en testen, mapkiezer, makerkeuze, downloads, pauzeren/annuleren, planning en status.</p></div>
+            <div class="card"><h3>Bestaande bibliotheek</h3><p>Hergebruikt bestanden, mapstructuur, <code>.part</code>-bestanden en het bestaande <code>.ofdl.sqlite3</code>-manifest.</p></div>
+          </div>
+        </div>
+        <div class="shot"><img src="../dsm-ui-dashboard-nl.png" alt="OnlyFans DL DSM-dashboard"></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap split">
+        <div>
+          <h2>Installatie</h2>
+          <ol class="steps">
+            <li><b>SynoCommunity-bron toevoegen.</b><br>Package Center → Instellingen → Pakketbronnen → <code>https://packages.synocommunity.com/</code></li>
+            <li><b>SPK installeren.</b><br>Package Center → Handmatige installatie. Python 3.13 wordt als afhankelijkheid geïnstalleerd.</li>
+            <li><b>Webwachtwoord instellen.</b><br>De installatiewizard vraagt om een wachtwoord. Open het pakket daarna via het DSM-menu of <code>http://&lt;NAS-IP&gt;:8765/</code>.</li>
+            <li><b>Map kiezen en sessie importeren.</b><br>Geef in DSM het systeeminterne account <code>sc-onlyfansdl</code> alleen lees-/schrijfrechten op de gekozen gedeelde map (Machtigingen → Systeeminterne gebruiker). Sla een bestaand bibliotheekpad op in Instellingen. Er worden geen gedeelde mappen automatisch aangemaakt.</li>
+          </ol>
+        </div>
+        <div>
+          <h2>Beveiligingsmodel</h2>
+          <p class="note">Het pakket draait als het onbevoorrechte DSM-serviceaccount <code>sc-onlyfansdl</code>.
+            Het vraagt geen root of lidmaatschap van de beheerdersgroep aan. De webinterface heeft een eigen wachtwoord;
+            dat is geen DSM-SSO. De sessie wordt opgeslagen met modus <code>0600</code> en nooit in instellingen of logboeken geschreven.</p>
+          <p style="color:var(--muted);font-size:.9rem;margin-top:14px">
+            Zet voor toegang van buiten de HTTPS-reverse-proxy van DSM vóór poort 8765. Stel de poort niet rechtstreeks open naar internet.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Opslag en compatibiliteit</h2>
+        <div class="grid">
+          <div class="card"><h3>Bibliotheek</h3><p>Eén expliciet opgeslagen pad in Instellingen voor downloads, bibliotheek en planning. Bestaande bestanden blijven staan. Bij upgrades moet het pad worden bevestigd; oude gedeelde mappen worden niet verwijderd.</p></div>
+          <div class="card"><h3>Geheugen</h3><p>De controledienst blijft klein. De worker stopt na elke taak. Het doel van 50 MiB PSS in rust is nog niet op de DS723+ geverifieerd.</p></div>
+          <div class="card"><h3>Planning</h3><p>Een dagelijkse tijd kan de opgeslagen downloadinstellingen starten. Er draait nooit meer dan één taak tegelijk.</p></div>
+          <div class="card"><h3>Taal en aanmelding</h3><p>Zeven interfacetalen, waaronder kernteksten in Italiaans, Nederlands en Portugees. Auto gebruikt de beschikbare DSM-taal en daarna de browser; handmatige keuze gaat voor. Ontbrekende teksten vallen terug op Engels/Duits. De sessie blijft na herladen en upgrade bewaard.</p></div>
+          <div class="card"><h3>Status en herstel</h3><p>Herladen herstelt de huidige taak en recente gebeurtenissen. Scannen en bestandsoverdracht hebben aparte voortgangsindicatoren. Tijdelijke API-fouten tonen een annuleerbare wachttijd van drie minuten.</p></div>
+          <div class="card"><h3>Free &amp; Trials</h3><p>Alleen-lezen zoeken en optionele dagelijkse herinschrijvingen voor expliciet toegestane profielen die opnieuw als permanent gratis zijn gecontroleerd. Trials blijven op de website vanwege mogelijke betaalde verlenging. Een prijswijziging tussen controle en antwoord kan niet volledig worden uitgesloten.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Documentatie</h2>
+        <div class="grid">
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/README.md">README</a></h3><p>Overzicht, installatie en release-opmerkingen (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/INSTALL.md">Installatie</a></h3><p>Stap-voor-stap DSM-configuratie, opslagtoestemming en probleemoplossing (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/ARCHITECTURE.md">Architectuur</a></h3><p>Controledienst, worker, SQLite-taken en machtigingen (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/TEST_REPORT.md">Testrapport</a></h3><p>Lokale resultaten en DSM-hardwarechecklist (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/SECURITY.md">Beveiliging</a></h3><p>Sessiebeheer, blootstelling en reset (EN).</p></div>
+          <div class="card"><h3><a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/docs/RELIABILITY.md">Betrouwbaarheid</a></h3><p>Herverbinden, volledig stoppen en grenzen van gratis herinschrijving (EN).</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      Onofficiële client. Gebruik alleen je eigen account en inhoud die je mag opslaan.
+      Geen DRM-omzeiling, geen aankoopautomatisering en geen omzeiling van beveiligingscontroles.
+      <a href="https://github.com/Noa3/Synology-DSM-OnlyfansDownloader">GitHub</a>
+      · <a href="../index.html">English</a> · <a href="../de/index.html">Deutsch</a> · <a href="../fr/index.html">Français</a>
+      · <a href="../es/index.html">Español</a> · <a href="../it/index.html">Italiano</a> · <a href="../pt/index.html">Português</a>
+    </div>
+  </footer>
+</body>
+</html>

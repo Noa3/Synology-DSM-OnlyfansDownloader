@@ -1,5 +1,15 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-6 — English-default docs and multilingual project pages
+
+- Make English the default README and documentation language; keep German
+  versions as `README_DE.md` and `docs/*_DE.md`.
+- Add translated GitHub Pages for French, Spanish, Italian, Dutch and Portuguese
+  alongside English and German, with a shared language switcher and localized
+  dashboard screenshots.
+- Add Italian, Dutch and Portuguese dashboard strings for empty-job/event states.
+- No functional change to downloads, storage consent or automation.
+
 ## DSM 2.8.0-5 — resilient status, language and opt-in free resubscribe
 
 - Restore active/latest job and recent events after reload. Retry failed initial

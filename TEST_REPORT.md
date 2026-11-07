@@ -1,183 +1,181 @@
-# Testbericht — OnlyFans DL für Synology DSM 2.8.0-5
+# Test report — OnlyFans DL for Synology DSM 2.8.0-6
 
-Build-Datum: **2026-11-07**
-Zielplattform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 aus SynoCommunity**
-Testumgebung: Windows 11, CPython 3.13.12, Chromium/Playwright
+Build date: **2026-11-07**
+Target platform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 from SynoCommunity**
+Test environment: Windows 11, CPython 3.13.12, Chromium/Playwright
 
-> **Klarstellung:** Die Spalte „DSM“ ist in dieser Build-Umgebung **nicht
-> ausgeführt** worden, weil kein Zugriff auf die DS723+ bestand (kein SSH, kein
-> erreichbarer NAS-Host). Alle mit „DSM: AUSSTEHEND“ markierten Prüfungen sind
-> auf dem Zielgerät nachzuholen. Sie werden hier nicht als bestanden
-> deklariert. Die lokalen Tests prüfen Code, Paketaufbau, UI und
-> Speicherverhalten, ersetzen aber keinen DSM-Installationstest.
+> **Clarification:** The “DSM” column was **not executed** in this build
+> environment because there was no access to the DS723+ (no SSH, no reachable NAS
+> host). All checks marked “DSM: PENDING” must be repeated on the target device.
+> They are not declared as passed here. The local tests check code, package
+> layout, UI and memory behavior but do not replace a DSM installation test.
 
-## Ergebnisübersicht
+## Result summary
 
-| Prüfung | Ergebnis | Ort |
+| Check | Result | Where |
 | --- | --- | --- |
-| Vollständige Python-Testsuite | **363 Tests, 0 Fehler, 3 Skips** | lokal |
-| DSM-spezifische Tests | **69 Tests, 0 Fehler, 2 Linux-Skips** | lokal |
-| DSM-spezifische Tests inkl. echter Prozessgruppen | **69 Tests, 0 Fehler, keine Skips** | Linux-CI |
-| Paketbau | **bestanden** | lokal |
-| Reproduzierbarer Bau (zweimal) | **byte-identisch** | lokal |
-| Browser-UI (Playwright) | **bestanden**, keine Konsolenfehler | lokal |
-| Speichermessung Steuerdienst | **ca. 33 MiB RSS / 18,5 MiB private** | früherer lokaler Build, nicht neu gemessen |
-| Streaming-Worker 256 MiB | **Peak ca. 37,3 MiB RSS / 28,2 MiB private** | früherer lokaler Build, nicht neu gemessen |
-| Installation auf DS723+ | **AUSSTEHEND** | DSM |
-| Start/Stop auf DSM | **AUSSTEHEND** | DSM |
-| NAS-Neustart | **AUSSTEHEND** | DSM |
-| Update/Erhalt der Downloads | **AUSSTEHEND** | DSM |
-| PSS im Leerlauf auf DS723+ | **AUSSTEHEND** | DSM |
-| Echte OnlyFans-Sitzung / API | **AUSSTEHEND** | Zielkonto |
+| Full Python test suite | **363 tests, 0 failures, 3 skips** | local |
+| DSM-specific tests | **69 tests, 0 failures, 2 Linux skips** | local |
+| DSM tests including real process groups | **69 tests, 0 failures, no skips** | Linux CI |
+| Package build | **passed** | local |
+| Reproducible build (twice) | **byte-identical** | local |
+| Browser UI (Playwright) | **passed**, no console errors | local |
+| Control service memory | **approx. 33 MiB RSS / 18.5 MiB private** | earlier local build, not re-measured |
+| Streaming worker 256 MiB | **peak approx. 37.3 MiB RSS / 28.2 MiB private** | earlier local build, not re-measured |
+| Installation on DS723+ | **PENDING** | DSM |
+| Start/stop on DSM | **PENDING** | DSM |
+| NAS reboot | **PENDING** | DSM |
+| Update/download preservation | **PENDING** | DSM |
+| Idle PSS on DS723+ | **PENDING** | DSM |
+| Real OnlyFans session / API | **PENDING** | target account |
 
-Windows überspringt den Symlink-Rechtetest sowie zwei echte Linux-Prozesstests.
-Letztere prüfen eine verwaiste Worker-Kindgruppe und das Stoppen des Dienstes
-bei fehlender PID-Datei. Sie werden in der Linux-CI ausgeführt, nicht als native
-DSM-Tests ausgegeben.
+Windows skips the symlink permission test and two real Linux process tests. The
+latter check an orphaned worker child group and stopping the service when the PID
+file is missing. They run in Linux CI and are not reported as native DSM tests.
 
-## Ausgeführter Befehl
+## Command run
 
 ```bash
 python -m unittest discover -s tests
 ```
 
-Auszug:
+Excerpt:
 
 ```
 Ran 363 tests in 118.857s
 OK (skipped=3)
 ```
 
-Die DSM-Tests umfassen:
+The DSM tests include:
 
-| Datei | Inhalt |
+| File | Contents |
 | --- | --- |
-| `tests/test_dsm_security.py` | Passwort-Hashing, SessionStore 0600, Redaktion, Login-Limiter |
-| `tests/test_dsm_db.py` | Schema, Jobs, Ereignis-/Auftragsbegrenzung, Creator-Seiten, Manifest-Statistik |
-| `tests/test_dsm_jobs.py` | Optionsvalidierung, Pfadgrenzen, Profile, Proxy, Zeitplan |
-| `tests/test_dsm_worker.py` | Pause/Abbruch, EventWriter, Preview, Abonnements, Download-Mapping |
-| `tests/test_dsm_service.py` | Setup/Login/CSRF, Rechte, Ordner, Jobs, Preview, statische Dateien, Rate-Limit, leichter Import |
-| `tests/test_dsm_package.py` | INFO, Checksumme, Inhalte, Rechte, JSON, Shell-Syntax, Reproduzierbarkeit |
-| `tests/test_dsm_resilience.py` | Thread-Fortschritt, Schreibsperren, NaN-JSON, Ereignis-Tail, Sitzungswechsel, DSM-Locale, Free-Resub-Preisschutz, API-Backoff, PID-Reuse und Linux-Prozessbäume |
+| `tests/test_dsm_security.py` | password hashing, SessionStore 0600, redaction, login limiter |
+| `tests/test_dsm_db.py` | schema, jobs, event/job limits, creator pages, manifest statistics |
+| `tests/test_dsm_jobs.py` | option validation, path boundaries, profiles, proxy, schedule |
+| `tests/test_dsm_worker.py` | pause/cancel, EventWriter, preview, subscriptions, download mapping |
+| `tests/test_dsm_service.py` | setup/login/CSRF, permissions, folders, jobs, preview, static files, rate limit, light import |
+| `tests/test_dsm_package.py` | INFO, checksum, contents, modes, JSON, shell syntax, reproducibility |
+| `tests/test_dsm_resilience.py` | thread progress, write locks, NaN JSON, event tail, session changes, DSM locale, free-resub price guard, API backoff, PID reuse and Linux process trees |
 
-Zusätzlich prüft `test_dsm_service.py` in einem frischen Prozess, dass der
-Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
-`ofdl.downloads` importiert.
+In addition, `test_dsm_service.py` checks in a fresh process that the control
+service does **not** import `requests`, `curl_cffi`, `PIL`, `ofdl.api` or
+`ofdl.downloads`.
 
-## Paketprüfung
+## Package verification
 
 ```
-Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-5.spk
-Größe: 22,01 MiB
-SHA256: bc6a778f6b6e6f3f143b8ddc1b28e986f600f67e454b81141bbd723c7c09d1c6
-MD5(package.tgz): 27fc1b80a29ea02a6747dc6c5a8dbfb7
+File:    dist/OnlyFansDL-r1000-dsm72_2.8.0-6.spk
+Size:    22.01 MiB
+SHA256:  6271f8f08c13ce8be689b5d5d8843a68c6558631d8c0689f7e976064183729bd
+MD5(package.tgz): 1675024208a9ce6950993d2db419d0b3
 ```
 
-Geprüft:
+Verified:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-5`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-6`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
-  `install_dep_packages=python313>=3.13.11-9`, MD5-Checksumme stimmt.
+  `install_dep_packages=python313>=3.13.11-9`, MD5 checksum matches.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
   `web/index.html`, `web/static/app.js`, `ui/config`,
-  `requirements-dsm.lock`, 11 Wheels; **keine** `__pycache__`, `.pyc`,
-  `session.json` oder `control.sqlite3`.
-- Skripte `postinst`, `postupgrade`, `start-stop-status` sind `0755`;
-  `postinst` enthält `ACTION="install"`, `postupgrade` `ACTION="upgrade"`;
-  kein `@ACTION@` mehr.
-- `conf/privilege`, `conf/resource`, `WIZARD_UIFILES/*`, `ui/config` sind
-  gültiges JSON; `bash -n` parst alle Shell-Skripte.
-- `conf/privilege`: `run-as: package`, `sc-onlyfansdl`, `groupname: synocommunity`,
-  **kein** `join-groupname`, **kein** `ctrl-script`; entspricht dem Muster
-  funktionierender SynoCommunity-Pakete.
-- `conf/resource`: leer, keine `data-share`-Ressource. Keine automatische
-  Freigabeerstellung oder Berechtigungserteilung. Installer/Start exportieren
-  keinen automatisch ermittelten Freigabepfad.
-- Zwei Builds mit `SOURCE_DATE_EPOCH=1794009600` sind byte-identisch.
+  `requirements-dsm.lock`, 11 wheels; **no** `__pycache__`, `.pyc`,
+  `session.json` or `control.sqlite3`.
+- Scripts `postinst`, `postupgrade`, `start-stop-status` are `0755`;
+  `postinst` contains `ACTION="install"`, `postupgrade` `ACTION="upgrade"`;
+  no `@ACTION@` remains.
+- `conf/privilege`, `conf/resource`, `WIZARD_UIFILES/*`, `ui/config` are valid
+  JSON; `bash -n` parses all shell scripts.
+- `conf/privilege`: `run-as: package`, `sc-onlyfansdl`,
+  `groupname: synocommunity`, **no** `join-groupname`, **no** `ctrl-script`;
+  matches the pattern of working SynoCommunity packages.
+- `conf/resource`: empty, no `data-share` resource. No automatic share creation
+  or permission grant. Installer/start export no automatically determined share
+  path.
+- Two builds with `SOURCE_DATE_EPOCH=1794009600` are byte-identical.
 
-  Windows-Build und Linux-CI-Build haben beide den oben genannten SHA256.
-  Der Release-Asset ist der lokal geprüfte Windows-Build. Abweichende zukünftige
-  zlib-Versionen könnten andere gzip-Bytes erzeugen.
+  The Windows build and Linux CI build both have the SHA256 above. The release
+  asset is the locally tested Windows build. Different future zlib versions
+  could produce different gzip bytes.
 
-## Browser-UI
+## Browser UI
 
-`python tools/test_web_ui.py` mit Playwright (Chromium, headless, 1440×1100)
-prüft mit synthetischer Sitzung und lokalen Manifesten, ohne echtes Konto:
+`python tools/test_web_ui.py` with Playwright (Chromium, headless, 1440×1100)
+checks with a synthetic session and local manifests, without a real account:
 
-- Setup/Login und Hauptoberfläche mit sieben Sprachen; simulierte DSM-System-
-  sprache und Sprachcookie, manueller Vorrang und Rückkehr zu Auto
-- Erster Start ohne Bibliothek → Einstellungen, kein impliziter Zielordner
-- Gespeicherter Pfad für Downloads und Bibliothek; Manifestwechsel sofort sichtbar
-- Ordnererstellung: Bestätigung ablehnen erzeugt nichts, Bestätigung erlauben
-  erstellt nur den ausdrücklich gewählten Unterordner
-- Dateiauswahl sendet keine Sitzung; Import erst nach ausdrücklichem Klick
-- Sprachenwechsel durch alle Tabs, Pfad bleibt korrekt; Neuladen behält Pfad
-- Abmelden/Login ohne beschädigte HTTP-Folgeanfrage
-- Reload während laufendem Auftrag: Status und letzte 100 Ereignisse erscheinen
-- Ausfall nur der Ereignisabfrage: Dienst bleibt online, Auftrag bleibt sichtbar
-- Fehlgeschlagener Erstaufruf: automatischer neuer Versuch ohne manuelles Reload
-- Unbekannte Scan-Gesamtmenge ohne Prozentzahl; separate Datei-Byteanzeige;
-  nach Ende der Suche plausibler Gesamtfortschritt und sichtbare 401-Fehler
-- Mobile Breite 375 px ohne Überlauf in Übersicht, Free & Trials und Einstellungen
-- keine `console.error`/`pageerror`-Meldungen
-- keine externen Ressourcen (CSP-konform)
+- setup/login and main interface in seven languages; simulated DSM system
+  language and language cookie, manual override and return to Auto
+- first start without a library → Settings, no implicit destination
+- saved path for downloads and library; manifest change immediately visible
+- folder creation: rejecting confirmation creates nothing, accepting creates only
+  the explicitly chosen subfolder
+- file selection sends no session; import only after an explicit click
+- language switching through all tabs, path stays correct; reload keeps the path
+- sign-out/sign-in without a corrupted following HTTP request
+- reload during a running job: status and the last 100 events appear
+- only the event request fails: service stays online, job stays visible
+- failed initial request: automatic retry without a manual reload
+- unknown scan total without a percentage; separate file-byte display; plausible
+  overall progress after scanning ends and visible 401 errors
+- mobile width 375 px without overflow in Overview, Free & Trials and Settings
+- no `console.error`/`pageerror` messages
+- no external resources (CSP compliant)
 
-Aktuelle Dashboard-Screenshots sind synthetische lokale Tests, keine NAS-/
-echten Downloadmessungen: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`.
-Ältere illustrative Screenshots (nicht der aktuelle Speicher-Dialog):
+Current dashboard screenshots are synthetic local tests, not NAS/real download
+measurements: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en.png`.
+Older illustrative screenshots (not the current storage dialog):
 `docs/dsm-ui-folders.png`, `docs/dsm-ui-session.png`,
 `docs/dsm-ui-session-tested.png`, `docs/dsm-ui-settings.png`.
 
-## Speichermessung (lokal, nur Indiz)
+## Memory measurement (local, indicative only)
 
-Die Messung erfolgte unter Windows. PSS ist dort nicht verfügbar; die
-DSM-Zielmarke bezieht sich auf PSS und muss mit `tools/measure_dsm.py` auf der
-DS723+ gemessen werden. Die folgenden Werte stammen aus der früheren Messung,
-nicht aus einem erneuten Speicherbenchmark von 2.8.0-5.
+The measurement was performed under Windows. PSS is not available there; the DSM
+target refers to PSS and must be measured with `tools/measure_dsm.py` on the
+DS723+. The following values come from the earlier measurement, not from a new
+memory benchmark of 2.8.0-6.
 
-| Zustand | Prozesse | RSS | Private |
+| State | Processes | RSS | Private |
 | --- | --- | ---: | ---: |
-| Dienst nach Start | Dienst + venv-Launcher | 33,0 MiB | 18,5 MiB |
-| UI-Ressourcen geladen | Dienst + Launcher | 33,6 MiB | 18,9 MiB |
-| Nach 5 Vorschau-Aufträgen | Dienst + Launcher | 33,9 MiB | 19,0 MiB |
-| Streaming-Worker, 256 MiB | Worker + Launcher | **37,3 MiB Peak** | 28,2 MiB |
-| Import-Baseline Download-Worker | Worker + Launcher | 39,6 MiB | 28,0 MiB |
+| Service after start | service + venv launcher | 33.0 MiB | 18.5 MiB |
+| UI resources loaded | service + launcher | 33.6 MiB | 18.9 MiB |
+| After 5 preview jobs | service + launcher | 33.9 MiB | 19.0 MiB |
+| Streaming worker, 256 MiB | worker + launcher | **37.3 MiB peak** | 28.2 MiB |
+| Import baseline download worker | worker + launcher | 39.6 MiB | 28.0 MiB |
 
-Der Streaming-Test verwendet den echten `run_downloads`-Pfad (Manifest,
-Byte-Range-Prüfung, 256-KiB-Chunks, `.part`-Handling) gegen eine lokale
-HTTP-Quelle; nur die Host-/Portprüfung war für den Test gelockert. Der Worker
-lädt die Datei nicht in den Speicher. Details: `docs/MEASUREMENT.md`.
+The streaming test uses the real `run_downloads` path (manifest, byte-range
+check, 256 KiB chunks, `.part` handling) against a local HTTP source; only the
+host/port check was relaxed for the test. The worker does not load the file into
+memory. Details: `docs/MEASUREMENT.md`.
 
-## DSM-Testmatrix (auf der DS723+ nachzuholen)
+## DSM test matrix (to complete on the DS723+)
 
-| # | Prüfung | Vorgehen | Status |
+| # | Check | Procedure | Status |
 | --- | --- | --- | --- |
-| 1 | Paketquelle + Python 3.13 | SynoCommunity-Quelle, `python313` installieren | AUSSTEHEND |
-| 2 | SPK-Installation | Package Center → Manuell installieren | AUSSTEHEND |
-| 3 | Wizard/Passwort | Passwort setzen, Oberfläche öffnen | AUSSTEHEND |
-| 4 | Start/Stop | Package Center starten/stoppen; `start-stop-status` | AUSSTEHEND |
-| 5 | NAS-Neustart | NAS neu starten, Dienst und Oberfläche prüfen | AUSSTEHEND |
-| 6 | Update | neue SPK über die alte installieren; Downloads/Manifest erhalten | AUSSTEHEND |
-| 7 | Deinstallation | Freigabe/Downloads bleiben erhalten | AUSSTEHEND |
-| 8 | Sitzungsimport + Test | echte API-Anfrage importieren, Test | AUSSTEHEND |
-| 9 | Download | kleiner Creator, Datei + Manifest prüfen | AUSSTEHEND |
-| 10 | Große Bibliothek | ~80.000 Dateien, Scan/Download, Abbruch | AUSSTEHEND |
-| 11 | PSS idle | `measure_dsm.py sample --seconds 30 --interval 2` | AUSSTEHEND |
-| 12 | PSS mit UI | Browser offen, 2 min, dann messen | AUSSTEHEND |
-| 13 | PSS aktiv | großer Auftrag, `--interval 0.5` | AUSSTEHEND |
-| 14 | PSS nach Abbruch | 30 s warten, Worker beendet? | AUSSTEHEND |
-| 15 | Mehrfachläufe | Sequenz 3×, Rückkehr zum Ausgangswert | AUSSTEHEND |
-| 16 | Upgrade-Speicherzustimmung | Kein alter Pfad aktiv, bis in Einstellungen gespeichert | AUSSTEHEND |
-| 17 | Keine neuen Freigaben | Installation/Start legt weder OnlyFans noch OnlyFansDL an | AUSSTEHEND |
-| 18 | Benutzerrechte | Nur ausdrücklich gewählte Freigabe für sc-onlyfansdl erlaubt | AUSSTEHEND |
-| 19 | Vollständiges Stoppen | Dienst + Worker + ffmpeg bei aktivem/pausiertem/hängendem Auftrag beenden | AUSSTEHEND |
-| 20 | Echte Sitzungsprobleme | Browser/NAS parallel, 401/429/Netzfehler und kontrollierte Erholung prüfen | AUSSTEHEND |
-| 21 | Free-Resub | Nur autorisierte kostenlose Profile, echte API-Kompatibilität | AUSSTEHEND |
+| 1 | Package source + Python 3.13 | SynoCommunity source, install `python313` | PENDING |
+| 2 | SPK installation | Package Center → Manual Install | PENDING |
+| 3 | Wizard/password | Set password, open interface | PENDING |
+| 4 | Start/stop | Package Center start/stop; `start-stop-status` | PENDING |
+| 5 | NAS reboot | Reboot, check service and interface | PENDING |
+| 6 | Update | install new SPK over old; downloads/manifest preserved | PENDING |
+| 7 | Uninstall | share/downloads remain | PENDING |
+| 8 | Session import + test | import real API request, test | PENDING |
+| 9 | Download | small creator, check file + manifest | PENDING |
+| 10 | Large library | ~80,000 files, scan/download, cancel | PENDING |
+| 11 | PSS idle | `measure_dsm.py sample --seconds 30 --interval 2` | PENDING |
+| 12 | PSS with UI | browser open, 2 min, then measure | PENDING |
+| 13 | PSS active | large job, `--interval 0.5` | PENDING |
+| 14 | PSS after cancel | wait 30 s, worker exited? | PENDING |
+| 15 | Multiple runs | sequence 3×, return to baseline | PENDING |
+| 16 | Upgrade storage consent | no old path active until saved in Settings | PENDING |
+| 17 | No new shares | install/start create neither OnlyFans nor OnlyFansDL | PENDING |
+| 18 | User permissions | only explicitly chosen share allowed for sc-onlyfansdl | PENDING |
+| 19 | Complete stop | stop service + worker + ffmpeg for active/paused/hung job | PENDING |
+| 20 | Real session issues | browser/NAS in parallel, 401/429/network errors and controlled recovery | PENDING |
+| 21 | Free resub | only authorized free profiles, real API compatibility | PENDING |
 
-### Befehle für die DSM-Messung
+### Commands for DSM measurement
 
-`tools/measure_dsm.py` auf das NAS kopieren (z. B. in die Freigabe) und mit dem
-SynoCommunity-Python ausführen:
+Copy `tools/measure_dsm.py` to the NAS (e.g. into the share) and run it with the
+SynoCommunity Python:
 
 ```bash
 PY=/var/packages/python313/target/bin/python3
@@ -185,35 +183,35 @@ $PY /volume1/OnlyFans/tools/measure_dsm.py snapshot --json
 $PY /volume1/OnlyFans/tools/measure_dsm.py sample --seconds 30 --interval 2
 ```
 
-Die Oberfläche zeigt unter **Übersicht → Dienst → Speicher** zusätzlich PSS/RSS
-des Dienstes und des aktiven Workers an.
+Under **Overview → Service → Memory** the interface additionally shows PSS/RSS of
+the service and the active worker.
 
-## Bekannte, nicht geprüfte Punkte
+## Known, unverified points
 
-Linux-CI auf Implementierungscommit `ffd3124d04f79b5dffd7db5f2b90721f9cf45fc5`:
+Linux CI on implementation commit `ffd3124d04f79b5dffd7db5f2b90721f9cf45fc5`:
 [`42357026929`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42357026929),
-`Ran 69 tests in 22.421s`, `OK`, keine Skips. Enthält die echten Linux-Tests
-für Worker-Kindgruppen und Dienststop ohne PID-Datei. **Kein DSM-Hardwaretest.**
+`Ran 69 tests in 22.421s`, `OK`, no skips. Includes the real Linux tests for
+worker child groups and service stop without a PID file. **Not a DSM hardware
+test.**
 
-- **Keine echte OnlyFans-Sitzung** und kein echter Mediendownload in dieser
-  Umgebung. Die API-/Signatur-/Cloudflare-Kompatibilität kann sich ändern.
-- **Keine DSM-Hardware**: Installation, Start/Stop, Neustart, Update,
-  Berechtigungen, SynoCommunity-Abhängigkeit und PSS wurden nicht auf einer
-  DS723+ ausgeführt.
-- **Keine 80.000-Dateien-Bibliothek** auf NAS-Hardware. Die Engine-Tests und die
-  Manifest-/Legacy-Tests decken die Logik ab; die reale Scan-Dauer hängt von
-  Speicher und HDD/SSD ab.
-- **PSS** ist nur auf Linux verfügbar; die lokalen Windows-Werte sind keine
-  DSM-PSS-Werte.
-- Der Worker-Peak bei einem echten großen Download kann über dem 256-MiB-Test
-  liegen (TLS, curl_cffi, Netzwerkpuffer). Auf DSM messen.
-- Kein DSM-Desktopfenster implementiert. Browseroberfläche bleibt aktiv;
-  Klickschutz/CSP werden nicht gelockert. Siehe `docs/DSM_INTEGRATION.md`.
-- Vorhandene unerwünschte NAS-Freigaben wurden hier nicht gelöscht: kein Zugriff
-  auf das NAS. Update löscht keine Benutzerdaten. In DSM nur nach Inhaltsprüfung
-  die ausdrücklich genannten Freigaben entfernen.
+- **No real OnlyFans session** and no real media download in this environment.
+  API/signature/Cloudflare compatibility can change.
+- **No DSM hardware**: installation, start/stop, reboot, update, permissions,
+  SynoCommunity dependency and PSS were not run on a DS723+.
+- **No 80,000-file library** on NAS hardware. The engine tests and
+  manifest/legacy tests cover the logic; real scan duration depends on storage
+  and HDD/SSD.
+- **PSS** is available only on Linux; the local Windows values are not DSM PSS
+  values.
+- The worker peak for a real large download can exceed the 256 MiB test (TLS,
+  curl_cffi, network buffers). Measure on DSM.
+- No DSM desktop window implemented. The browser interface remains active;
+  click protection/CSP are not relaxed. See `docs/DSM_INTEGRATION.md`.
+- Existing unwanted NAS shares were not deleted here: no NAS access. The update
+  deletes no user data. Remove the explicitly named shares in DSM only after
+  checking their contents.
 
-## Reproduktion
+## Reproduction
 
 ```bash
 python tools/fetch_wheels.py
@@ -221,6 +219,6 @@ python tools/build_spk.py
 python -m unittest discover -s tests
 ```
 
-Erwartung: keine Testfehler und ein byte-identisches SPK bei gleichem
-`SOURCE_DATE_EPOCH`. Browser-Test separat: `python tools/test_web_ui.py`
-(optionale Entwicklerabhängigkeit Playwright mit installiertem Chromium).
+Expectation: no test failures and a byte-identical SPK with the same
+`SOURCE_DATE_EPOCH`. Browser test separately: `python tools/test_web_ui.py`
+(optional developer dependency Playwright with installed Chromium).

@@ -1,156 +1,153 @@
-# Architektur
+# Architecture
 
-## Ziel
+## Goal
 
-Ein natives DSM-Paket, das im Leerlauf möglichst wenig Arbeitsspeicher belegt
-und vorhandene Bibliotheken weiterverwendet. Der vorhandene Python-Kern
-(`ofdl/`) bleibt die einzige Download-Engine; Desktop-UI und CLI werden nicht
-ersetzt.
+A native DSM package that uses as little memory as possible at idle and reuses
+existing libraries. The existing Python core (`ofdl/`) remains the only download
+engine; the desktop UI and CLI are not replaced.
 
-## Prozessmodell
+## Process model
 
 ```
 ┌────────────────────────────────────────────────────────────┐
 │ DSM Package Center / start-stop-status                     │
-│   startet genau einen Steuerdienst                         │
+│   starts exactly one control service                       │
 └───────────────────────────┬────────────────────────────────┘
                             │
 ┌───────────────────────────▼────────────────────────────────┐
-│ ofdl.dsm.service  (dauerhaft, klein)                       │
-│  • statische Weboberfläche (HTML/CSS/JS)                   │
-│  • Anmeldung, CSRF, Passwort, Sitzungsdatei                │
-│  • SQLite: Einstellungen, Aufträge, Ereignisse, Creator    │
-│  • Zeitplanung                                             │
-│  • startet/überwacht den Worker                            │
-│  • importiert NUR die Standardbibliothek                   │
+│ ofdl.dsm.service  (persistent, small)                      │
+│  • static web interface (HTML/CSS/JS)                      │
+│  • login, CSRF, password, session file                     │
+│  • SQLite: settings, jobs, events, creators                │
+│  • scheduling                                               │
+│  • starts/monitors the worker                               │
+│  • imports ONLY the standard library                        │
 └───────────────┬───────────────────────────────┬────────────┘
-                │ subprocess (1 Auftrag)        │ HTTP :8765
+                │ subprocess (1 job)            │ HTTP :8765
 ┌───────────────▼───────────────────┐   ┌───────▼────────────┐
-│ ofdl.dsm.worker (kurzlebig)        │   │ Browser            │
-│  • Sitzung, API, Regeln            │   │ (LAN, Passwort)    │
-│  • Download-Engine / Scan          │   └────────────────────┘
-│  • Pillow-Vorschau                 │
-│  • SQLite-Manifest im Zielordner   │
-│  • beendet sich nach dem Auftrag   │
+│ ofdl.dsm.worker (short-lived)      │   │ Browser            │
+│  • session, API, rules             │   │ (LAN, password)    │
+│  • download engine / scan          │   └────────────────────┘
+│  • Pillow preview                  │
+│  • SQLite manifest in target folder│
+│  • exits after the job             │
 └────────────────────────────────────┘
 ```
 
-Der Steuerdienst startet keine Threads für Downloads. Er öffnet den Worker als
-Kindprozess, schreibt dessen PID in die Auftragszeile und wartet in einem
-Überwachungsthread auf das Ende. Es läuft höchstens **ein** Worker gleichzeitig
-(409 bei einem zweiten Start). Pause und Abbruch werden über Spalten in der
-Auftragszeile signalisiert; der Worker prüft sie an seinen vorhandenen
-`Control.checkpoint()`-Punkten (mindestens alle 0,5 s). Ein Abbruch lässt
-abgeschlossene Dateien und resumierbare `.part`-Dateien liegen.
+The control service starts no download threads. It opens the worker as a child
+process, writes its PID into the job row and waits for completion in a monitor
+thread. At most **one** worker runs at a time (409 on a second start). Pause and
+cancel are signalled through job-row columns; the worker checks them at its
+existing `Control.checkpoint()` points (at least every 0.5 s). Cancellation
+leaves completed files and resumable `.part` files in place.
 
-Auf POSIX prüft der Worker zusätzlich, ob sein Elternprozess noch lebt. Stirbt
-der Steuerdienst hart, beendet sich der Worker beim nächsten Checkpoint selbst.
-Auf Windows ist diese Prüfung deaktiviert, weil `os.getppid()` dort für
-abgekoppelte Prozesse unzuverlässig ist.
+On POSIX the worker also checks that its parent is still alive. If the control
+service dies hard, the worker exits itself at the next checkpoint. On Windows
+this check is disabled because `os.getppid()` is unreliable for detached
+processes there.
 
-## Warum der Steuerdienst klein bleibt
+## Why the control service stays small
 
-`ofdl/dsm/service.py` importiert bewusst **nicht**:
+`ofdl/dsm/service.py` deliberately does **not** import:
 
 - `requests`, `curl_cffi`, `ofdl.api`, `ofdl.downloads`
 - `PIL` / `ofdl.preview`
 - `tkinter` / `ofdl.ui`
 
-Ein Test startet einen frischen Python-Prozess, importiert nur den Steuerdienst
-und prüft, dass diese Module nicht in `sys.modules` landen. Die schweren
-Bibliotheken werden erst im Worker geladen.
+A test starts a fresh Python process, imports only the control service and
+checks that these modules do not appear in `sys.modules`. The heavy libraries
+are loaded only in the worker.
 
-Der Dienst hält keine Downloadlisten, keine Dateibaum-Indizes und keine
-Vorschaubilder im Speicher. Creator-Listen liegen in SQLite und werden
-seitenweise gelesen (50 pro Seite). Ereignisse werden auf die letzten 3000 pro
-Auftrag begrenzt; Aufträge auf die letzten 100. Die WAL-Datenbank nutzt einen
-Cache von 2 MiB und `temp_store=FILE`.
+The service keeps no download lists, no file-tree indexes and no preview images
+in memory. Creator lists live in SQLite and are read page by page (50 per page).
+Events are limited to the last 3000 per job; jobs to the last 100. The WAL
+database uses a 2 MiB cache and `temp_store=FILE`.
 
-## SQLite-Schema (Auszug)
+## SQLite schema (excerpt)
 
 ```sql
 settings(key PRIMARY KEY, value, updated_at)
 jobs(id, kind, status, payload, result, error, phase,
      progress_done, progress_total, stats, pid, exit_code,
      pause_requested, cancel_requested, created_at, started_at, finished_at)
-events(id, job_id, ts, level, message)          -- letzte 3000 je Auftrag
+events(id, job_id, ts, level, message)          -- last 3000 per job
 creators(username PRIMARY KEY, display_name, subscription, scanned_at)
+offers(account_id, username, kind, status, detail, scanned_at)
+renewal_attempts(account_id, username, day, status)
 ```
 
-`payload` enthält nur die für den Auftrag nötigen Optionen. Ein Proxy mit
-Zugangsdaten wird **nicht** im Auftrag gespeichert, sondern in der
-Einstellungstabelle (Datei 0600); die Oberfläche erhält nur eine maskierte
-Darstellung. Die Sitzung liegt in `session.json` (0600), nie in `settings`.
+`payload` contains only the options needed for the job. A proxy with credentials
+is **not** stored in the job but in the settings table (file 0600); the interface
+receives only a masked representation. The session lives in `session.json`
+(0600), never in `settings`.
 
-## Auftragsablauf
+## Job flow
 
-1. `POST /api/jobs` validiert die Optionen im Steuerdienst (ohne die schweren
-   Module zu importieren) und legt die Auftragszeile an.
-2. Der Worker wird mit `PYTHONPATH=<pkgdest>` und einem bereinigten Environment
-   gestartet. stdout geht nach `/dev/null`, stderr in `logs/job-<id>.log`.
-3. Der Worker markiert den Auftrag als `running`, lädt Sitzung/Regeln/Engine und
-   schreibt Fortschritt und Ereignisse gedrosselt in SQLite. Pro Datei werden
-   keine großen Objekte gehalten; die Pipeline hat eine Queue von 64 Einträgen.
-4. Am Ende schreibt der Worker `completed`, `failed` oder `cancelled` mit einem
-   kleinen Ergebnisobjekt. Der Steuerdienst räumt alte Ereignisse/Aufträge auf.
-5. Ein abgebrochener oder fehlgeschlagener Worker wird vom Monitor als
-   `cancelled`/`failed` markiert, falls er selbst nicht mehr dazu kam.
+1. `POST /api/jobs` validates the options in the control service (without
+   importing the heavy modules) and creates the job row.
+2. The worker starts with `PYTHONPATH=<pkgdest>` and a reduced environment.
+   stdout goes to `/dev/null`, stderr to `logs/job-<id>.log`.
+3. The worker marks the job `running`, loads session/rules/engine and writes
+   progress and events to SQLite in a throttled way. No large objects are held
+   per file; the pipeline has a queue of 64 entries.
+4. At the end the worker writes `completed`, `failed` or `cancelled` with a small
+   result object. The control service prunes old events/jobs.
+5. A cancelled or failed worker is marked `cancelled`/`failed` by the monitor if
+   it could not do so itself.
 
-## Sitzung und Anmeldung
+## Session and login
 
-- Die Weboberfläche hat ein eigenes Passwort (PBKDF2-HMAC-SHA256, 600.000
-  Iterationen, zufälliges Salt). Es wird bei der Installation über den
-  DSM-Wizard gesetzt; ohne Wizard erscheint eine Ersteinrichtungsseite.
-- Login setzt ein `HttpOnly`-, `SameSite=Strict`-Cookie mit 12 Stunden Laufzeit.
-  Zustandsändernde Requests benötigen zusätzlich einen CSRF-Token. Ein fremder
-  `Origin`/`Referer` wird abgelehnt.
-- Die OnlyFans-Sitzung wird ausschließlich über den vorhandenen Import
-  (`ofdl.auth.parse_session`) eingelesen. Der Import wird nie ausgeführt und
-  nicht protokolliert. Ein Sitzungstest ist ein eigener Worker-Auftrag.
-- Die Oberfläche zeigt „Importiert“ bis ein Sitzungstest erfolgreich war, danach
-  „Verbunden“. Der Status wird in `settings.session_verified` gespeichert.
+- The web interface has its own password (PBKDF2-HMAC-SHA256, 600,000
+  iterations, random salt). It is set during installation through the DSM
+  wizard; without the wizard a first-time setup page appears.
+- Login sets an `HttpOnly`, `SameSite=Strict` cookie with a 12-hour lifetime.
+  State-changing requests additionally require a CSRF token. A foreign
+  `Origin`/`Referer` is rejected.
+- The OnlyFans session is read exclusively through the existing import
+  (`ofdl.auth.parse_session`). The import is never executed and not logged. A
+  session test is its own worker job.
+- The interface shows “Imported” until a session test succeeds, then
+  “Connected”. The status is stored in `settings.session_verified`.
 
-## Ordner und Berechtigungen
+## Folders and permissions
 
-- `conf/resource` ist leer. Es werden keine Freigaben erstellt oder automatisch
-  berechtigt. `bootstrap`, Installation und Start wählen keinen Bibliothekspfad.
-- `settings.output_dir` ist der einzige Bibliothekspfad. Erst explizites Speichern
-  setzt `library_confirmed=1`; auch ältere automatisch gewählte Pfade brauchen
-  diese Bestätigung. Jobs mit abweichendem Pfad werden abgelehnt, Zeitpläne
-  verwenden den aktuellen Pfad statt alter Snapshots. Ein Job sperrt Pfadwechsel.
-- `conf/privilege` setzt `run-as: package`, `sc-onlyfansdl` und Gruppe
-  `synocommunity`. Kein `ctrl-script`, keine root-/Administratorgruppe.
-- Der Ordner-Dialog liest nur Verzeichnisnamen (maximal 500 pro Ebene), keine
-  Dateiinhalte. Er erlaubt keine Pfade außerhalb der freigegebenen Volumes.
-  Andere Freigaben funktionieren nur, wenn das Dienstkonto dort Leserechte hat;
-  sonst meldet der Dialog einen Berechtigungsfehler.
-- Vom Dienst neu angelegte Ordner erhalten Modus `0770`. Die DSM-Freigabe-ACLs
-  und das Administrator-Konto behalten die Kontrolle; das Paket ändert keine
-  Gruppenzugehörigkeit.
+- `conf/resource` is empty. No shares are created or automatically granted.
+  `bootstrap`, installation and start choose no library path.
+- `settings.output_dir` is the only library path. Only explicit saving sets
+  `library_confirmed=1`; even older automatically chosen paths need this
+  confirmation. Jobs with a different path are rejected, schedules use the
+  current path instead of old snapshots. A job blocks path changes.
+- `conf/privilege` sets `run-as: package`, `sc-onlyfansdl` and group
+  `synocommunity`. No `ctrl-script`, no root/administrator group.
+- The folder dialog reads only directory names (at most 500 per level), no file
+  contents. It allows no paths outside the shared volumes. Other shares work
+  only if the service account has read rights there; otherwise the dialog
+  reports a permission error.
+- Folders newly created by the service get mode `0770`. DSM share ACLs and the
+  administrator account remain in control; the package changes no group
+  membership.
 
-## Vereinbarkeit mit vorhandenen Downloads
+## Compatibility with existing downloads
 
-Die Engine prüft zuerst den erwarteten Pfad und danach das vorhandene
-`.ofdl.sqlite3`. Erst wenn beides fehlt, wird der Creator-Baum einmalig nach
-alten Layouts durchsucht (LegacyIndex). Es werden keine Dateien gelöscht oder
-umbenannt. Ein bestehender Ordner wird unter Einstellungen ausgewählt;
-die Dateistruktur bleibt unverändert.
+The engine first checks the expected path and then the existing
+`.ofdl.sqlite3`. Only if both are missing is the creator tree searched once for
+old layouts (LegacyIndex). No files are deleted or renamed. An existing folder is
+selected under Settings; the file structure remains unchanged.
 
-## Zeitplanung
+## Scheduling
 
-Ein einzelner Scheduler-Thread prüft alle 20 Sekunden die Einstellung
-`schedule` (aktiv, `HH:MM`, gespeicherte Download-Optionen). Ist die Zeit
-erreicht, kein Auftrag aktiv, eine Sitzung vorhanden und heute noch nicht
-gelaufen, startet er denselben Worker-Auftragstyp wie ein manueller Download.
-Ein verpasster Lauf wird am selben Tag nachgeholt, sofern der Dienst läuft.
-Es wird nie ein zweiter Auftrag parallel gestartet.
+A single scheduler thread checks the `schedule` setting every 20 seconds
+(enabled, `HH:MM`, saved download options). When the time is reached, no job is
+active, a session exists and the job has not run today, it starts the same worker
+job type as a manual download. A missed run is caught up on the same day if the
+service is running. A second job is never started in parallel.
 
-## Paket-Lebenszyklus
+## Package lifecycle
 
-- `postinst`/`postupgrade` legen die venv an, installieren die Wheels offline
-  (`--no-index --require-hashes`), prüfen die Importe und setzen beim ersten
-  Install das Web-Passwort. Ein Upgrade überschreibt das Passwort nicht.
-- `start-stop-status` startet/stoppt den Dienst und schreibt `service.pid`.
-- `preupgrade`/`preuninst` stoppen den Dienst.
-- `postuninst` entfernt nur private Steuerdaten, venv und Protokolle. Die
-  Freigabe und alle Downloads bleiben erhalten.
+- `postinst`/`postupgrade` create the venv, install the wheels offline
+  (`--no-index --require-hashes`), check the imports and set the web password on
+  first install. An upgrade does not overwrite the password.
+- `start-stop-status` starts/stops the service and writes `service.pid`.
+- `preupgrade`/`preuninst` stop the service.
+- `postuninst` removes only private control data, venv and logs. The library and
+  all downloads remain.

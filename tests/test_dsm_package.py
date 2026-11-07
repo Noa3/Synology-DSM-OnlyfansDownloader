@@ -50,7 +50,7 @@ class PackageTests(unittest.TestCase):
             key, _, value = line.partition('=')
             values[key] = value.strip('"')
         self.assertEqual(values['package'], 'OnlyFansDL')
-        self.assertEqual(values['version'], '2.8.0-5')
+        self.assertEqual(values['version'], '2.8.0-6')
         self.assertEqual(values['arch'], 'r1000')
         self.assertEqual(values['os_min_ver'], '7.2-64570')
         self.assertEqual(values['adminport'], '8765')

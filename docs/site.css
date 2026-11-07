@@ -41,6 +41,13 @@ header.site {
 .nav .spacer { flex: 1; }
 .nav a, .nav span { font-size: .9rem; color: var(--muted); }
 .nav a:hover { color: var(--text); }
+.langs { display: flex; flex-wrap: wrap; gap: 4px; }
+.langs a {
+  padding: 3px 7px; border-radius: 7px; border: 1px solid transparent;
+  font-size: .74rem; font-weight: 700; letter-spacing: .04em;
+}
+.langs a:hover { border-color: var(--line); text-decoration: none; }
+.langs a[aria-current="page"] { color: var(--text); border-color: var(--line); background: rgba(255,255,255,.05); }
 .hero { padding: 78px 0 50px; }
 .eyebrow { color: var(--accent); font-weight: 700; font-size: .82rem; letter-spacing: .12em; text-transform: uppercase; }
 h1 { font-size: clamp(2.1rem, 5vw, 3.5rem); line-height: 1.05; letter-spacing: -.03em; margin: 12px 0 18px; }
@@ -80,4 +87,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; ba
 .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 .badge { border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px; color: var(--muted); font-size: .78rem; }
 footer { border-top: 1px solid var(--line); margin-top: 40px; padding: 26px 0 40px; color: var(--muted); font-size: .84rem; }
-@media (max-width: 760px) { .split { grid-template-columns: 1fr; } .hero { padding-top: 52px; } }
+@media (max-width: 760px) {
+  .split { grid-template-columns: 1fr; }
+  .hero { padding-top: 52px; }
+  .nav { flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+  .langs { order: 3; width: 100%; }
+}
