@@ -190,9 +190,9 @@ des Dienstes und des aktiven Workers an.
 
 ## Bekannte, nicht geprüfte Punkte
 
-Linux-CI auf Implementierungscommit `accbee631c2f45fed9a0054ba0ab88fc42eaec8e`:
-[`42527913130`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42527913130),
-`Ran 77 tests in 22.185s`, `OK`, keine Skips. Enthält die echten Linux-Tests
+Linux-CI auf Implementierungscommit `84a1224ad0292268110014cd363082cd509d634b`:
+[`42532214134`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42532214134),
+`Ran 77 tests in 25.678s`, `OK`, keine Skips. Enthält die echten Linux-Tests
 für Worker-Kindgruppen und Dienststop ohne PID-Datei. **Kein DSM-Hardwaretest.**
 
 - **Keine echte OnlyFans-Sitzung** und kein echter Mediendownload in dieser
