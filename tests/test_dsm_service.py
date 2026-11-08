@@ -41,6 +41,8 @@ class Harness:
             'OFDL_CONFIG_DIR': self.root / 'config',
             'OFDL_TMP_DIR': self.root / 'tmp',
             'OFDL_HOME': self.root / 'home',
+            # Keep package state and daily snapshots inside the test sandbox.
+            'SYNOPKG_PKGVAR': self.root / 'private',
         }.items():
             self.env[key] = os.environ.get(key)
             os.environ[key] = str(value)

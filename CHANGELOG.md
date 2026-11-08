@@ -1,5 +1,22 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-9 — preserve settings and session across upgrades
+
+- Create a private snapshot before every upgrade (`preupgrade`) with a
+  consistent SQLite backup, `session.json`, free-resub history and metadata.
+- Restore only when the live database or session is missing or corrupt; valid
+  data is never overwritten. A failed restore stops the upgrade instead of
+  creating a fresh, empty control database.
+- Add a once-per-day private snapshot in the running service, so upgrades from
+  older revisions without the new preupgrade script also have a recent backup.
+- Keep the last 5 snapshots under `var/backups` (0600/0700); uninstall removes
+  them. User media is never copied.
+- Add tests proving that the library path, web password, schedule, proxy,
+  free-resub settings and imported session survive a missing/corrupt data file,
+  and that a rerun of bootstrap does not reset them.
+- The upgrade wizard still asks for no password; the first-install password
+  stays active and can be changed after signing in.
+
 ## DSM 2.8.0-8 — prove library permissions
 
 - Add a user-triggered **Check permissions** action in Settings and Library.

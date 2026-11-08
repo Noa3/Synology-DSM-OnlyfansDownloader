@@ -1,11 +1,72 @@
 #!/bin/sh
-# Stop the old service before an upgrade replaces package files.
+# Stop the old service and snapshot private settings/session before an upgrade.
 set -u
+PKGVAR="${SYNOPKG_PKGVAR:-/var/packages/OnlyFansDL/var}"
 PKGROOT="${SYNOPKG_PKGROOT:-/var/packages/OnlyFansDL}"
+DATA="$PKGVAR/data"
+VENV="$PKGVAR/venv"
+
 if [ -x "$PKGROOT/target/scripts/start-stop-status" ]; then
     "$PKGROOT/target/scripts/start-stop-status" stop >/dev/null 2>&1 || true
 fi
 if [ -x "$PKGROOT/scripts/start-stop-status" ]; then
     "$PKGROOT/scripts/start-stop-status" stop >/dev/null 2>&1 || true
+fi
+
+# Inline snapshot so it also works when the old package version does not yet
+# ship ofdl.dsm.preserve. A consistent SQLite backup is used, not a raw copy
+# of a live WAL database. Existing valid data is never touched.
+PY="$VENV/bin/python"
+[ -x "$PY" ] || PY="/var/packages/python313/target/bin/python3"
+if [ -x "$PY" ] && { [ -s "$DATA/control.sqlite3" ] || [ -s "$DATA/session.json" ]; }; then
+    "$PY" - "$PKGVAR" "$DATA" <<'PY' >/dev/null 2>&1 || true
+import json, os, shutil, sqlite3, sys
+from datetime import datetime
+from pathlib import Path
+pkgvar, data = Path(sys.argv[1]), Path(sys.argv[2])
+target = pkgvar / 'backups' / (datetime.now().strftime('%Y%m%d-%H%M%S') + '-preupgrade')
+target.mkdir(parents=True, exist_ok=True)
+try: os.chmod(target, 0o700)
+except OSError: pass
+db = data / 'control.sqlite3'
+if db.is_file() and db.stat().st_size:
+    try:
+        src = sqlite3.connect(str(db), timeout=5)
+        try:
+            dst = sqlite3.connect(str(target / 'control.sqlite3'))
+            try: src.backup(dst)
+            finally: dst.close()
+        finally: src.close()
+        os.chmod(target / 'control.sqlite3', 0o600)
+    except Exception:
+        pass
+session = data / 'session.json'
+if session.is_file() and session.stat().st_size <= 2 * 1024 * 1024:
+    shutil.copy2(session, target / 'session.json')
+    try: os.chmod(target / 'session.json', 0o600)
+    except OSError: pass
+config = pkgvar / 'config'
+if config.is_dir():
+    (target / 'config').mkdir(exist_ok=True)
+    for item in config.glob('free-*.json'):
+        try:
+            shutil.copy2(item, target / 'config' / item.name)
+            os.chmod(target / 'config' / item.name, 0o600)
+        except OSError:
+            pass
+try:
+    (target / 'metadata.json').write_text(json.dumps({'reason': 'preupgrade',
+        'created_at': datetime.now().astimezone().isoformat()}) + '\n', encoding='utf-8')
+    os.chmod(target / 'metadata.json', 0o600)
+except OSError:
+    pass
+root = pkgvar / 'backups'
+try:
+    items = sorted((item for item in root.iterdir() if item.is_dir()), reverse=True)
+    for old in items[5:]:
+        shutil.rmtree(old, ignore_errors=True)
+except OSError:
+    pass
+PY
 fi
 exit 0

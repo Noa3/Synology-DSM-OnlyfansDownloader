@@ -50,7 +50,7 @@ The package source is required because Synology itself does not provide Python
    - Name: `SynoCommunity`
    - Location: `https://packages.synocommunity.com/`
    - The source must be trusted; DSM may show a notice.
-2. **Download `OnlyFansDL-r1000-dsm72_2.8.0-8.spk`** (from this repository's
+2. **Download `OnlyFansDL-r1000-dsm72_2.8.0-9.spk`** (from this repository's
    releases) and choose Package Center → Manual Install.
 3. Package Center installs **Python 3.13 automatically** as a dependency. If the
    runtime is missing, install `Python 3.13` from SynoCommunity first.
@@ -100,10 +100,19 @@ installation or operation.
 | Python environment | `/var/packages/OnlyFansDL/var/venv` |
 | Logs | `/var/packages/OnlyFansDL/var/logs/` |
 | Previews | `/var/packages/OnlyFansDL/var/data/previews/` |
+| Private upgrade/daily snapshots (last 5) | `/var/packages/OnlyFansDL/var/backups/` |
 
-Uninstalling removes the private control data and the venv. **Chosen libraries
-and all downloads remain.** An update keeps settings, session and venv and only
-installs changed wheels.
+Uninstalling removes the private control data, the venv and the snapshots.
+**Chosen libraries and all downloads remain.** An update keeps settings, session
+and venv and only installs changed wheels.
+
+Before an upgrade the package snapshots `control.sqlite3` (web password, library
+path, schedule, proxy, free-resubscribe settings, download defaults), the
+imported `session.json` and free-resubscribe history. The new version restores a
+snapshot only if the live database or session is missing or corrupt; valid data
+is never overwritten. A failed restore stops the upgrade rather than starting
+empty. A daily snapshot is also kept while the service runs. The last five
+snapshots stay under `var/backups` with private permissions.
 
 ## Sessions, status and Free & Trials
 
@@ -160,8 +169,8 @@ python tools/fetch_wheels.py
 python tools/build_spk.py
 
 # Result
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-8.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-8.spk.sha256
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-9.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-9.spk.sha256
 ```
 
 The build needs no Synology toolchain and no Linux. Wheels are downloaded from
@@ -205,7 +214,7 @@ security, API, worker, package layout). Results and the clear distinction betwee
 
 A window inside the DSM desktop is generally possible but needs an HTTPS /
 same-origin integration. Simple embedding of HTTP port 8765 would fail on
-HTTPS DSM due to mixed content and click protection. **2.8.0-8 still opens the
+HTTPS DSM due to mixed content and click protection. **2.8.0-9 still opens the
 browser interface**; security headers are not disabled.
 
 The session can be imported with a guided cURL text or a HAR/JSON file picker.

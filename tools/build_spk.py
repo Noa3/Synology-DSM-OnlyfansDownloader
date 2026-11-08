@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE = 'OnlyFansDL'
-VERSION = '2.8.0-8'
+VERSION = '2.8.0-9'
 ARCH = 'r1000'
 DSM_MIN = '7.2-64570'
 PORT = '8765'
@@ -203,10 +203,9 @@ def info_text(checksum: str) -> str:
         ('silent_upgrade', 'yes'),
         ('reloadui', 'yes'),
         ('install_dep_packages', 'python313>=3.13.11-9'),
-        ('changelog', '2.8.0-8: Permission self-check with real write probe, parent/account '
-                      'diagnostics and clearer download-start errors. 2.8.0-7 fixed partial '
-                      'status warnings and the ignored upgrade password. No automatic '
-                      'updater or ACL changes.'),
+        ('changelog', '2.8.0-9: Daily and pre-upgrade snapshots of settings, password hash, '
+                      'library path and session; restore only missing/corrupt data. 2.8.0-9 '
+                      'added permission diagnostics. No automatic updater or ACL changes.'),
         ('checksum', checksum),
     ]
     lines = [f'{key}="{value}"' for key, value in values]

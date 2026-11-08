@@ -5,10 +5,10 @@ Der vollständige aktuelle Bericht liegt zentral in
 entstehen. / The full current report is maintained in one place:
 [`TEST_REPORT.md`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/blob/main/TEST_REPORT.md).
 
-## 2.8.0-8
+## 2.8.0-9
 
-- 366 local Python tests: zero failures, three Windows skips. 72 DSM-specific
-  tests: zero failures, two real-Linux skips. Linux CI ran all 72 DSM tests with
+- 371 local Python tests: zero failures, three Windows skips. 77 DSM-specific
+  tests: zero failures, two real-Linux skips. Linux CI ran all 77 DSM tests with
   zero failures and no skips, including real process-tree/service-stop tests.
 - Browser regression: seven languages, simulated DSM locale/override, reload
   during work, separate event/boot failures, reconnection, scan/file progress,

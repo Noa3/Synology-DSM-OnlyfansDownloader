@@ -1,4 +1,4 @@
-# Testbericht — OnlyFans DL für Synology DSM 2.8.0-8
+# Testbericht — OnlyFans DL für Synology DSM 2.8.0-9
 
 Build-Datum: **2026-11-07**
 Zielplattform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 aus SynoCommunity**
@@ -44,7 +44,7 @@ python -m unittest discover -s tests
 Auszug:
 
 ```
-Ran 366 tests in 74.378s
+Ran 371 tests in 79.188s
 OK (skipped=3)
 ```
 
@@ -67,15 +67,15 @@ Steuerdienst **nicht** `requests`, `curl_cffi`, `PIL`, `ofdl.api` oder
 ## Paketprüfung
 
 ```
-Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-8.spk
+Datei:  dist/OnlyFansDL-r1000-dsm72_2.8.0-9.spk
 Größe: 22,01 MiB
-SHA256: 9bb5d9b03e3f65cd14e8e342cab01d706d5f53d6733c0bb4d4cb9804a726e580
-MD5(package.tgz): b3249765d99fc53ff159ccb6f4a37b35
+SHA256: 233884ddb63cd046e1fc008f20b3cae786f78975498bc6de19eda73d03fee40c
+MD5(package.tgz): 2adf98f32fc41a632bf934bd5be43542
 ```
 
 Geprüft:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-8`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-9`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
   `install_dep_packages=python313>=3.13.11-9`, MD5-Checksumme stimmt.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
@@ -133,7 +133,7 @@ echten Downloadmessungen: `docs/dsm-ui-dashboard.png`, `docs/dsm-ui-dashboard-en
 Die Messung erfolgte unter Windows. PSS ist dort nicht verfügbar; die
 DSM-Zielmarke bezieht sich auf PSS und muss mit `tools/measure_dsm.py` auf der
 DS723+ gemessen werden. Die folgenden Werte stammen aus der früheren Messung,
-nicht aus einem erneuten Speicherbenchmark von 2.8.0-8.
+nicht aus einem erneuten Speicherbenchmark von 2.8.0-9.
 
 | Zustand | Prozesse | RSS | Private |
 | --- | --- | ---: | ---: |
@@ -192,7 +192,7 @@ des Dienstes und des aktiven Workers an.
 
 Linux-CI auf Implementierungscommit `accbee631c2f45fed9a0054ba0ab88fc42eaec8e`:
 [`42527913130`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42527913130),
-`Ran 72 tests in 22.185s`, `OK`, keine Skips. Enthält die echten Linux-Tests
+`Ran 77 tests in 22.185s`, `OK`, keine Skips. Enthält die echten Linux-Tests
 für Worker-Kindgruppen und Dienststop ohne PID-Datei. **Kein DSM-Hardwaretest.**
 
 - **Keine echte OnlyFans-Sitzung** und kein echter Mediendownload in dieser

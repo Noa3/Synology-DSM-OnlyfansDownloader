@@ -51,7 +51,7 @@ nicht über SSH.
    - Name: `SynoCommunity`
    - Ort: `https://packages.synocommunity.com/`
    - Die Quelle muss vertrauenswürdig sein; DSM zeigt ggf. einen Hinweis.
-2. **`OnlyFansDL-r1000-dsm72_2.8.0-8.spk` herunterladen** (Release-Seite dieses
+2. **`OnlyFansDL-r1000-dsm72_2.8.0-9.spk` herunterladen** (Release-Seite dieses
    Repositories) und in Package Center → Manuell installieren auswählen.
 3. Package Center installiert **Python 3.13 automatisch** als Abhängigkeit.
    Falls die Laufzeit fehlt, zuerst `Python 3.13` aus SynoCommunity installieren.
@@ -102,11 +102,21 @@ SSH ist nur für die optionale Speicher-/Diagnosemessung nötig (siehe
 | Python-Umgebung | `/var/packages/OnlyFansDL/var/venv` |
 | Protokolle | `/var/packages/OnlyFansDL/var/logs/` |
 | Vorschaubilder | `/var/packages/OnlyFansDL/var/data/previews/` |
+| Private Upgrade-/Tages-Sicherungen (letzte 5) | `/var/packages/OnlyFansDL/var/backups/` |
 
-Beim Deinstallieren werden die privaten Steuerdaten und die venv entfernt.
-**Gewählte Bibliotheken und alle Downloads bleiben erhalten.** Ein Update
-behält Einstellungen, Sitzung und die venv bei und installiert nur geänderte
-Wheels nach.
+Beim Deinstallieren werden die privaten Steuerdaten, die venv und die
+Sicherungen entfernt. **Gewählte Bibliotheken und alle Downloads bleiben
+erhalten.** Ein Update behält Einstellungen, Sitzung und die venv bei und
+installiert nur geänderte Wheels nach.
+
+Vor einem Upgrade sichert das Paket `control.sqlite3` (Web-Passwort,
+Bibliothekspfad, Zeitplan, Proxy, Free-Resub-Einstellungen,
+Download-Standards), die importierte `session.json` und die
+Free-Resub-Historie. Die neue Version stellt eine Sicherung nur wieder her,
+wenn die aktive Datenbank oder Sitzung fehlt oder beschädigt ist; gültige Daten
+werden nie überschrieben. Eine fehlgeschlagene Wiederherstellung stoppt das
+Upgrade, statt leer zu starten. Zusätzlich läuft eine tägliche Sicherung. Die
+letzten fünf Sicherungen liegen mit privaten Rechten unter `var/backups`.
 
 ## Sitzungen, Status und Free & Trials
 
@@ -169,8 +179,8 @@ python tools/fetch_wheels.py
 python tools/build_spk.py
 
 # Ergebnis
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-8.spk
-# dist/OnlyFansDL-r1000-dsm72_2.8.0-8.spk.sha256
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-9.spk
+# dist/OnlyFansDL-r1000-dsm72_2.8.0-9.spk.sha256
 ```
 
 Der Build benötigt keinen Synology-Toolchain und kein Linux. Die Wheels werden aus
@@ -214,7 +224,7 @@ klare Trennung zwischen „lokal geprüft“ und „auf DSM-Hardware geprüft“
 
 Ein Fenster im DSM-Desktop ist grundsätzlich möglich, braucht aber eine
 HTTPS-/Same-Origin-Integration. Einfaches Einbetten von HTTP-Port 8765 würde
-bei HTTPS-DSM an Mixed Content und dem Klickschutz scheitern. **2.8.0-8 öffnet
+bei HTTPS-DSM an Mixed Content und dem Klickschutz scheitern. **2.8.0-9 öffnet
 weiterhin die Browseroberfläche**; Sicherheitsheader werden nicht abgeschaltet.
 
 Die Sitzung lässt sich geführt per cURL-Text oder HAR/JSON-Dateiauswahl

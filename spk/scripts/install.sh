@@ -63,6 +63,23 @@ if ! "$VENV/bin/python" -c 'import requests, curl_cffi, PIL, m3u8, socks' >/dev/
     exit 1
 fi
 
+# Restore the pre-upgrade snapshot only if the live database/session is missing
+# or corrupt. This is deliberately before bootstrap: a failed restore must stop
+# the upgrade instead of silently creating a fresh, empty control database.
+if [ "$ACTION" = "upgrade" ]; then
+    if ! PYTHONPATH="$PKGDEST" OFDL_DATA_DIR="$DATA" OFDL_CONFIG_DIR="$CONFIG" \
+        "$VENV/bin/python" -m ofdl.dsm.preserve restore >> "$LOGS/install.log" 2>&1; then
+        echo "ERROR: The previous settings/session could not be restored."
+        echo "See $LOGS/install.log; the upgrade was stopped to avoid data loss."
+        exit 1
+    fi
+    # A post-upgrade snapshot helps if this version's preupgrade was unavailable
+    # (for example when upgrading from an older package revision).
+    PYTHONPATH="$PKGDEST" OFDL_DATA_DIR="$DATA" OFDL_CONFIG_DIR="$CONFIG" \
+        "$VENV/bin/python" -m ofdl.dsm.preserve snapshot --reason postupgrade \
+        >> "$LOGS/install.log" 2>&1 || true
+fi
+
 if [ -n "${wizard_app_password:-}" ]; then
     if [ "${wizard_app_password}" != "${wizard_app_password_confirm:-}" ]; then
         echo "ERROR: The two web-interface passwords do not match."

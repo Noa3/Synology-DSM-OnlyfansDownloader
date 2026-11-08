@@ -15,7 +15,7 @@ pip-Befehle** erforderlich.
 
 ## 2. Paket installieren
 
-1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-8.spk` aus dem Release herunterladen.
+1. Die Datei `OnlyFansDL-r1000-dsm72_2.8.0-9.spk` aus dem Release herunterladen.
 2. Package Center → **Manuell installieren** → Datei auswählen.
 3. DSM zeigt die Abhängigkeit **Python 3.13** an und installiert sie
    automatisch aus der SynoCommunity-Quelle.
@@ -161,6 +161,14 @@ werden am selben Tag nicht wiederholt. Kontowechsel deaktiviert die Automatik.
 3. DSM erkennt das Upgrade. Einstellungen, Sitzung, venv und Downloads bleiben
    erhalten; die Wheels werden bei Bedarf nachinstalliert.
 4. Das Web-Passwort bleibt unverändert.
+5. Vor dem Upgrade legt das Paket eine private Sicherung unter
+   `/var/packages/OnlyFansDL/var/backups` an. Die neue Version stellt sie nur
+   wieder her, wenn `control.sqlite3` oder `session.json` fehlt oder beschädigt
+   ist. Gültige Daten werden nie überschrieben. Die letzten fünf Sicherungen
+   bleiben erhalten; beim Deinstallieren werden sie entfernt.
+6. Bibliothekspfad, Zeitplan, Proxy, Free-Resub-Einstellungen und die
+   importierte Sitzung sind Teil der Sicherung. Mediendateien werden nicht
+   kopiert.
 
 Es gibt derzeit **keine automatische Aktualisierung von GitHub** und keine
 eigene DSM-Paketquelle. Ein eventuell sichtbarer DSM-Schalter legt diese
@@ -181,11 +189,11 @@ wieder, wenn derselbe Ordner ausgewählt wird.
 | --- | --- |
 | „Python 3.13 wurde nicht gefunden“ | SynoCommunity-Quelle fehlt oder `python313` ist nicht installiert. Quelle prüfen, Python 3.13 installieren, Paket erneut installieren. |
 | Paket startet nicht | Package Center → Protokoll ansehen; zusätzlich `/var/packages/OnlyFansDL/var/logs/service.log` (nur mit SSH/File Station lesbar). Häufig: Port 8765 belegt. |
-| Anmeldung funktioniert nicht | Das Passwort der **Erstinstallation** verwenden. Ein Upgrade behält das bestehende Passwort; sein Wizard fragt seit 2.8.0-8 kein neues mehr ab. Bei vergessenem Passwort Paket deinstallieren und neu installieren (Downloads bleiben erhalten) oder die Steuerdaten zurücksetzen. |
-| „Verbindung wird wiederhergestellt …“ oben | 2.8.0-8 zeigt den fehlerhaften Teilbereich/HTTP-Status im gelben/roten Banner. Paket einmal neu starten, Seite hart neu laden (Strg+F5) und die Banner-Meldung zur Diagnose verwenden. Ein einzelner Teilfehler nimmt nicht mehr die ganze Oberfläche offline. |
+| Anmeldung funktioniert nicht | Das Passwort der **Erstinstallation** verwenden. Ein Upgrade behält das bestehende Passwort; sein Wizard fragt seit 2.8.0-9 kein neues mehr ab. Bei vergessenem Passwort Paket deinstallieren und neu installieren (Downloads bleiben erhalten) oder die Steuerdaten zurücksetzen. |
+| „Verbindung wird wiederhergestellt …“ oben | 2.8.0-9 zeigt den fehlerhaften Teilbereich/HTTP-Status im gelben/roten Banner. Paket einmal neu starten, Seite hart neu laden (Strg+F5) und die Banner-Meldung zur Diagnose verwenden. Ein einzelner Teilfehler nimmt nicht mehr die ganze Oberfläche offline. |
 | „Keine Sitzung eingerichtet“ | Unter **Sitzung** importieren und testen. |
 | Sitzungstest schlägt fehl | Anfrage von `onlyfans.com/api2/v2/` kopieren, nicht von einer anderen Seite. Session kann an Netz/IP gebunden sein; im gleichen Netz wie der Browser testen. Cloudflare-Anfragen werden nicht umgangen. |
-| „Paket benötigt root-Rechte“ / Administratorwarnung | Alte Versionen 2.8.0-1/2.8.0-2 ersetzen. 2.8.0-8 nutzt das SynoCommunity-Privileg-Muster ohne root-/Administratorgruppen-Rechte. Bei weiterer Warnung exakte DSM-Version und Meldung melden. |
+| „Paket benötigt root-Rechte“ / Administratorwarnung | Alte Versionen 2.8.0-1/2.8.0-2 ersetzen. 2.8.0-9 nutzt das SynoCommunity-Privileg-Muster ohne root-/Administratorgruppen-Rechte. Bei weiterer Warnung exakte DSM-Version und Meldung melden. |
 | Downloadordner nicht beschreibbar | In DSM dem Systeminternen Benutzer `sc-onlyfansdl` Lesen/Schreiben nur für die gewünschte Freigabe erlauben; dann den vorhandenen Pfad unter Einstellungen speichern. |
 | Kein DSM-Menüeintrag | Paket neu starten; `reloadui` wird beim Installieren gesetzt. Alternativ `http://<NAS-IP>:8765/` direkt öffnen. |
 | Viele Dateien, langsamer erster Lauf | Erwartet bei Altlayouts; Folgeläufe nutzen das Manifest. Keine Medien werden dauerhaft im Steuerdienst gehalten. |

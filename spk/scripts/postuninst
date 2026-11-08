@@ -3,6 +3,7 @@
 set -u
 PKGVAR="${SYNOPKG_PKGVAR:-/var/packages/OnlyFansDL/var}"
 rm -f "$PKGVAR/service.pid" 2>/dev/null || true
-rm -rf "$PKGVAR/data" "$PKGVAR/venv" "$PKGVAR/config" "$PKGVAR/tmp" "$PKGVAR/home" 2>/dev/null || true
+rm -rf "$PKGVAR/data" "$PKGVAR/venv" "$PKGVAR/config" "$PKGVAR/tmp" "$PKGVAR/home" \
+    "$PKGVAR/backups" 2>/dev/null || true
 rm -f "$PKGVAR/logs/service.log" "$PKGVAR/logs/job-"*.log "$PKGVAR/logs/install.log" 2>/dev/null || true
 exit 0

@@ -364,6 +364,7 @@ class Scheduler(threading.Thread):
     def run(self) -> None:
         while not self.stop_event.wait(20.0):
             try:
+                self.state._daily_backup()
                 self.tick()
             except Exception:
                 LOG.exception('scheduler tick failed')
@@ -450,9 +451,26 @@ class AppState:
         self.session_store = SessionStore(paths.data)
         self.job_manager = JobManager(paths)
         self._library_cache: tuple[float, dict[str, Any]] | None = None
+        self._daily_backup()
         self.scheduler = Scheduler(self) if start_scheduler else None
         if self.scheduler is not None:
             self.scheduler.start()
+
+    def _daily_backup(self) -> None:
+        """Keep a recent private snapshot even if an upgrade runs old scripts."""
+        try:
+            from . import preserve
+            today = datetime.now().date().isoformat()
+            with control_db.connect(self.paths.db) as db:
+                if control_db.get_setting(db, 'last_backup_date', '') == today:
+                    return
+            if preserve.snapshot(self.paths, 'daily') is None:
+                return
+            with control_db.connect(self.paths.db) as db:
+                control_db.set_setting(db, 'last_backup_date', today)
+            LOG.info('daily private backup created')
+        except Exception:
+            LOG.exception('daily private backup failed')
 
     # -- paths / settings -------------------------------------------------
     def ensure_output_dir(self) -> Path | None:
