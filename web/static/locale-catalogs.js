@@ -192,6 +192,19 @@
     catalogs.it[english] = it; catalogs.nl[english] = nl; catalogs.pt[english] = pt;
   }
   const updates = [
+    ['Check permissions', 'Vérifier les permissions', 'Comprobar permisos', 'Verifica permessi', 'Machtigingen controleren', 'Verificar permissões'],
+    ['Permissions confirmed.', 'Permissions confirmées.', 'Permisos confirmados.', 'Permessi confermati.', 'Machtigingen bevestigd.', 'Permissões confirmadas.'],
+    ['Read and write access for sc-onlyfansdl confirmed.', 'Accès lecture/écriture pour sc-onlyfansdl confirmé.', 'Acceso de lectura/escritura para sc-onlyfansdl confirmado.', 'Accesso lettura/scrittura per sc-onlyfansdl confermato.', 'Lees-/schrijftoegang voor sc-onlyfansdl bevestigd.', 'Acesso de leitura/escrita para sc-onlyfansdl confirmado.'],
+    ['Permission problem detected.', 'Problème de permissions détecté.', 'Problema de permisos detectado.', 'Problema di permessi rilevato.', 'Machtigingsprobleem gedetecteerd.', 'Problema de permissões detetado.'],
+    ['Path', 'Chemin', 'Ruta', 'Percorso', 'Pad', 'Caminho'],
+    ['Service account', 'Compte de service', 'Cuenta de servicio', 'Account di servizio', 'Serviceaccount', 'Conta de serviço'],
+    ['Read folder', 'Lire le dossier', 'Leer carpeta', 'Leggi cartella', 'Map lezen', 'Ler pasta'],
+    ['Traverse folder', 'Traverser le dossier', 'Acceder a la carpeta', 'Attraversa cartella', 'Map doorlopen', 'Atravessar pasta'],
+    ['Write (test)', 'Écriture (test)', 'Escritura (prueba)', 'Scrittura (test)', 'Schrijven (test)', 'Escrita (teste)'],
+    ['Unavailable', 'Indisponible', 'No disponible', 'Non disponibile', 'Niet beschikbaar', 'Indisponível'],
+    ['Parent folders without traverse permission', 'Dossiers parents sans droit de traversée', 'Carpetas superiores sin permiso de acceso', 'Cartelle superiori senza permesso di accesso', 'Bovenliggende mappen zonder doorgangsrecht', 'Pastas superiores sem permissão de acesso'],
+    ['Not readable: {error}. Check path and permissions.', 'Non lisible : {error}. Vérifiez le chemin et les permissions.', 'No legible: {error}. Comprueba ruta y permisos.', 'Non leggibile: {error}. Verifica percorso e permessi.', 'Niet leesbaar: {error}. Controleer pad en machtigingen.', 'Não legível: {error}. Verifique o caminho e as permissões.'],
+    ['Permission check failed: {detail}', 'Échec de la vérification des permissions : {detail}', 'Error al comprobar permisos: {detail}', 'Verifica permessi non riuscita: {detail}', 'Machtigingscontrole mislukt: {detail}', 'Falha na verificação de permissões: {detail}'],
     ['Unknown error', 'Erreur inconnue', 'Error desconocido', 'Errore sconosciuto', 'Onbekende fout', 'Erro desconhecido'],
     ['Timeout', 'Délai dépassé', 'Tiempo de espera agotado', 'Tempo scaduto', 'Time-out', 'Tempo esgotado'],
     ['Partial status error: {detail}. The last known state remains visible.', 'Erreur de statut partielle : {detail}. Le dernier état reste affiché.', 'Error parcial de estado: {detail}. Se conserva el último estado.', 'Errore di stato parziale: {detail}. Rimane visibile l’ultimo stato.', 'Gedeeltelijke statusfout: {detail}. De laatst bekende status blijft zichtbaar.', 'Erro parcial de estado: {detail}. O último estado conhecido permanece visível.'],

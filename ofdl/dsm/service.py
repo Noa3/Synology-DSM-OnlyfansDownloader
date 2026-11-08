@@ -16,7 +16,10 @@ import re
 import shlex
 import shutil
 import signal
+import stat
 import subprocess
+import tempfile
+from itertools import islice
 import threading
 import time
 from contextlib import suppress
@@ -55,6 +58,14 @@ class HTTPError(Exception):
         self.status = int(status)
         self.message = str(message)
         super().__init__(message)
+
+
+def _error_detail(exc: BaseException) -> dict[str, Any]:
+    """Return safe, actionable diagnostics without credentials."""
+    if isinstance(exc, OSError):
+        return {'type': type(exc).__name__, 'errno': exc.errno,
+                'strerror': exc.strerror, 'filename': exc.filename}
+    return {'type': type(exc).__name__, 'message': str(exc)[:300]}
 
 
 def _json_dump(value: Any) -> bytes:
@@ -470,7 +481,7 @@ class AppState:
             return None
         try:
             return Path(configured).resolve()
-        except OSError:
+        except (OSError, RuntimeError):
             return None
 
     def password_configured(self) -> bool:
@@ -554,11 +565,158 @@ class AppState:
         if (self._library_cache and now - self._library_cache[0] < 5.0
                 and self._library_cache[1].get('output_dir') == (str(output) if output else '')):
             return self._library_cache[1]
-        stats = control_db.library_stats(output)
+        try:
+            stats = control_db.library_stats(output)
+        except Exception as exc:
+            LOG.exception('library statistics failed')
+            stats = {'manifest': False, 'files': 0, 'bytes': 0,
+                     'error': type(exc).__name__, 'detail': _error_detail(exc)}
         stats['output_dir'] = str(output) if output else ''
-        stats['writable'] = bool(output and directory_is_writable(output))
+        # Cheap permission snapshot; the actual write probe runs only in the
+        # explicit diagnostics and immediately before a download.
+        for name, mode in (('readable', os.R_OK), ('writable', os.W_OK),
+                           ('executable', os.X_OK)):
+            try:
+                stats[name] = bool(output and os.access(output, mode))
+            except OSError:
+                stats[name] = False
         self._library_cache = (now, stats)
         return stats
+
+    def storage_check(self) -> dict[str, Any]:
+        """User-triggered proof of the effective library permissions.
+
+        The package account is unprivileged, so this only reports what DSM ACLs
+        allow; it never changes ownership or ACLs on user data.
+        """
+        output = self.output_dir()
+        if output is None:
+            raise HTTPError(409, 'Kein bestätigter Bibliothekspfad. Bitte zuerst Einstellungen → Bibliothekspfad speichern.')
+        hints: list[str] = []
+
+        def describe(path: Path) -> dict[str, Any]:
+            info: dict[str, Any] = {'path': str(path)}
+            try:
+                lst = path.lstat()
+                st = path.stat()
+                info.update({
+                    'exists': True,
+                    'is_dir': stat.S_ISDIR(st.st_mode),
+                    'is_symlink': stat.S_ISLNK(lst.st_mode),
+                    'mode': oct(stat.S_IMODE(st.st_mode)),
+                    'uid': st.st_uid,
+                    'gid': st.st_gid,
+                    'read': os.access(path, os.R_OK),
+                    'write': os.access(path, os.W_OK),
+                    'execute': os.access(path, os.X_OK),
+                })
+                with suppress(ImportError, KeyError):
+                    import pwd
+                    info['owner'] = pwd.getpwuid(st.st_uid).pw_name
+                with suppress(ImportError, KeyError):
+                    import grp
+                    info['group'] = grp.getgrgid(st.st_gid).gr_name
+            except OSError as exc:
+                info.update({'exists': False, 'error': _error_detail(exc)})
+            return info
+
+        process: dict[str, Any] = {'cwd': str(self.paths.pkgdest)}
+        try:
+            process.update({'uid': os.geteuid(), 'gid': os.getegid(), 'groups': os.getgroups()})
+            with suppress(ImportError, KeyError):
+                import pwd
+                process['user'] = pwd.getpwuid(os.geteuid()).pw_name
+            with suppress(ImportError, KeyError):
+                import grp
+                process['group'] = grp.getgrgid(os.getegid()).gr_name
+        except AttributeError:
+            process['user'] = 'unknown (non-POSIX)'
+
+        target = describe(output)
+        parents: list[dict[str, Any]] = []
+        current = output
+        for _ in range(6):
+            if current == current.parent:
+                break
+            current = current.parent
+            parents.append(describe(current))
+            if current == Path(current.root):
+                break
+
+        listing: dict[str, Any] = {'ok': False}
+        try:
+            with os.scandir(output) as entries:
+                sample = [entry.name for entry in islice(entries, 20)]
+            listing = {'ok': True, 'sample_count': len(sample), 'sample': sample[:5]}
+        except OSError as exc:
+            listing['error'] = _error_detail(exc)
+
+        write_probe: dict[str, Any] = {'ok': False}
+        try:
+            with tempfile.NamedTemporaryFile(mode='wb', prefix='.ofdl-perm-',
+                                             dir=output, delete=True) as stream:
+                stream.write(b'x')
+                stream.flush()
+            write_probe = {'ok': True}
+        except OSError as exc:
+            write_probe['error'] = _error_detail(exc)
+
+        disk: dict[str, Any] = {'ok': False}
+        try:
+            usage = shutil.disk_usage(output)
+            disk = {'ok': True, 'free': usage.free, 'total': usage.total,
+                    'free_text': human_bytes(usage.free), 'total_text': human_bytes(usage.total)}
+        except OSError as exc:
+            disk['error'] = _error_detail(exc)
+
+        manifest = {'present': False}
+        manifest_path = output / '.ofdl.sqlite3'
+        try:
+            if manifest_path.is_file():
+                manifest = {'present': True, 'readable': True}
+                with suppress(Exception):
+                    import sqlite3
+                    uri = manifest_path.resolve().as_uri() + '?mode=ro'
+                    db = sqlite3.connect(uri, uri=True, timeout=2)
+                    try:
+                        row = db.execute('SELECT COUNT(*) FROM media').fetchone()
+                        manifest['files'] = int(row[0] or 0)
+                    finally:
+                        db.close()
+        except OSError as exc:
+            manifest = {'present': True, 'readable': False, 'error': _error_detail(exc)}
+
+        if not target.get('exists'):
+            hints.append('Der gespeicherte Pfad existiert für das Dienstkonto nicht oder ist nicht erreichbar.')
+        elif not target.get('is_dir'):
+            hints.append('Der gespeicherte Pfad ist kein Ordner.')
+        if not target.get('execute'):
+            hints.append('Fehlendes Ausführungs-/Wechselrecht auf diesem Ordner oder einem Elternordner. In DSM die Berechtigung auf der Freigabe und allen Elternordnern setzen.')
+        if not target.get('read'):
+            hints.append('Fehlendes Leserecht für sc-onlyfansdl. In DSM unter Freigabe → Bearbeiten → Berechtigungen → Systeminterner Benutzer Lesen/Schreiben setzen und auf Unterordner anwenden.')
+        if not write_probe.get('ok'):
+            hints.append('Schreibtest fehlgeschlagen. Lesen/Schreiben für sc-onlyfansdl prüfen, Freigabe entsperren und „Auf diesen Ordner, Unterordner und Dateien anwenden“ wählen.')
+        if not disk.get('ok'):
+            hints.append('Freier Speicher konnte nicht gelesen werden; meist fehlt das Ausführungsrecht auf einem Elternordner.')
+        if manifest.get('present') and not manifest.get('readable'):
+            hints.append('Das Manifest .ofdl.sqlite3 ist vorhanden, aber nicht lesbar. Dateirechte prüfen; Downloads können trotzdem neu aufgebaut werden.')
+        if not hints:
+            hints.append('Lesen, Wechseln und Schreiben wurden erfolgreich geprüft.')
+
+        return {
+            'ok': bool(target.get('is_dir') and target.get('read') and target.get('execute')
+                       and write_probe.get('ok') and disk.get('ok')),
+            'path': str(output),
+            'process': process,
+            'target': target,
+            'parents': parents,
+            'listing': listing,
+            'write_test': write_probe,
+            'disk': disk,
+            'manifest': manifest,
+            'hints': hints,
+            'checked_at': datetime.now().astimezone().isoformat(),
+        }
 
     def list_folders(self, requested: str | None) -> dict[str, Any]:
         roots = allowed_roots(self.paths)
@@ -1063,7 +1221,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 return reader()
             except Exception as exc:
                 LOG.exception('status section failed: %s', section)
-                warnings.append({'section': section, 'error': type(exc).__name__})
+                warnings.append({'section': section, 'error': type(exc).__name__,
+                                 'detail': _error_detail(exc)})
                 return default
 
         active = None
@@ -1086,11 +1245,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         output = safe('output_dir', self.state.output_dir, None)
 
         def read_disk() -> dict[str, Any] | None:
-            if output is None or not output.is_dir():
+            if output is None:
                 return None
-            usage = shutil.disk_usage(output)
-            return {'total': usage.total, 'used': usage.used, 'free': usage.free,
-                    'total_text': human_bytes(usage.total), 'free_text': human_bytes(usage.free)}
+            try:
+                if not output.is_dir():
+                    return None
+                usage = shutil.disk_usage(output)
+                return {'total': usage.total, 'used': usage.used, 'free': usage.free,
+                        'total_text': human_bytes(usage.total), 'free_text': human_bytes(usage.free)}
+            except (OSError, RuntimeError) as exc:
+                return {'error': type(exc).__name__, 'detail': _error_detail(exc)}
 
         disk = safe('disk', read_disk, None)
 
@@ -1252,6 +1416,11 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.send_json(200, self.state.job_manager.pause(job_id, action == 'pause'))
             else:
                 raise HTTPError(404, 'Aktion nicht gefunden.')
+            return
+        if path == '/api/storage/check':
+            session = self.require_auth()
+            self.require_csrf(session[1])
+            self.send_json(200, self.state.storage_check())
             return
         if path == '/api/folders':
             session = self.require_auth()

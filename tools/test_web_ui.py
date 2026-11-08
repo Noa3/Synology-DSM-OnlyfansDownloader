@@ -195,6 +195,11 @@ def main() -> None:
                     page.unroute('**/api/status')
                     page.click('#refresh-button')
                     expect(page.locator('#connection-banner')).to_be_hidden()
+                    page.click('[data-tab="settings"]')
+                    page.click('#check-storage')
+                    expect(page.locator('#storage-check')).to_be_visible()
+                    expect(page.locator('#storage-check')).to_contain_text('Read and write access for sc-onlyfansdl confirmed.')
+                    expect(page.locator('#storage-check')).to_contain_text(str(second))
                     page.click('#logout-button')
                     expect(page.locator('#auth-submit')).to_be_visible()
                     for language, label in [('fr', 'Connexion'), ('es', 'Iniciar sesión'), ('de', 'Anmelden')]:

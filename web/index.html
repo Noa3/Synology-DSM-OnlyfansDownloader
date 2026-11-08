@@ -284,6 +284,7 @@
           <div><dt>Freier Platz</dt><dd id="library-disk">–</dd></div>
         </dl>
         <p id="library-error" class="error" role="status"></p>
+        <div class="button-row"><button id="check-library-permissions" class="ghost" type="button">Berechtigungen prüfen</button></div>
         <p class="hint">Die Zählung kommt aus dem vorhandenen <code>.ofdl.sqlite3</code>. Downloads, Bibliothek und Zeitplan verwenden den gespeicherten Pfad unter Einstellungen. Ohne Manifest sind vorhandene Dateien nicht automatisch gezählt.</p>
       </article>
       <article class="card">
@@ -308,6 +309,8 @@
         </div>
         <p class="hint">Ein gemeinsamer Pfad für Downloads, Bibliothek und Zeitplan. Speichern verschiebt und löscht keine Dateien. Neue Unterordner entstehen nur nach ausdrücklichem Anlegen oder beim gestarteten Download.</p>
         <p class="hint">Bereits von älteren Versionen angelegte Freigaben bleiben erhalten. Nur selbst in DSM entfernen, nachdem ihr Inhalt geprüft wurde.</p>
+        <div class="button-row"><button id="check-storage" class="ghost" type="button">Berechtigungen prüfen</button></div>
+        <div id="storage-check" class="storage-check" hidden aria-live="polite"></div>
       </article>
       <article class="card">
         <div class="card-head"><h2>Zeitplan</h2></div>

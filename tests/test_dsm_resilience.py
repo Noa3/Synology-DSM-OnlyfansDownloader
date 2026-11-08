@@ -115,6 +115,32 @@ class ResilienceTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(any(item['section'] == 'output_dir' for item in data['warnings']))
 
+    def test_storage_check_reports_account_and_probe(self):
+        self.h.setup()
+        self.h.call('POST', '/api/settings', {'output_dir': str(self.h.output)})
+        status, data = self.h.call('POST', '/api/storage/check', {})
+        self.assertEqual(status, 200)
+        self.assertTrue(data['ok'], data)
+        self.assertEqual(data['path'], str(self.h.output.resolve()))
+        self.assertTrue(data['target']['is_dir'])
+        self.assertTrue(data['write_test']['ok'])
+        self.assertTrue(data['disk']['ok'])
+        self.assertTrue(data['process'].get('user'))
+        self.assertTrue(data['hints'])
+        # The probe must not leave a file behind.
+        self.assertFalse(any(name.startswith('.ofdl-perm-') for name in
+                             (item.name for item in self.h.output.iterdir())))
+
+    def test_library_failure_is_a_warning_not_a_500(self):
+        self.h.setup()
+        with patch('ofdl.dsm.service.control_db.library_stats', side_effect=PermissionError(13, 'denied', '/volume1/x')):
+            status, data = self.h.call('GET', '/api/status')
+        self.assertEqual(status, 200)
+        self.assertEqual(data['library']['error'], 'PermissionError')
+        self.assertEqual(data['library']['detail']['errno'], 13)
+        self.assertIn('/volume1/x', data['library']['detail']['filename'])
+        self.assertFalse(any(item['section'] == 'library' for item in data['warnings']))
+
     def test_session_cannot_change_mid_job(self):
         self.h.setup(); self.h.import_fake_session()
         with db.connect(self.h.paths.db) as conn:

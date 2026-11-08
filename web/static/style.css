@@ -329,6 +329,11 @@ td.path { font-family: var(--mono); font-size: .78rem; }
 }
 .toast.ok { border-color: rgba(84, 209, 138, .45); }
 .toast.bad { border-color: rgba(239, 107, 120, .5); }
+.storage-check { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: rgba(5,10,16,.35); font-size: .86rem; }
+.storage-check p.ok { color: var(--ok); }
+.storage-check p.bad { color: var(--danger); }
+.storage-check .facts { margin-top: 8px; }
+.storage-check .bullets { margin-top: 8px; }
 .result-box { margin-top: 10px; font-size: .86rem; color: var(--muted); white-space: pre-wrap; }
 .result-box.ok { color: var(--ok); }
 .result-box.bad { color: var(--danger); }

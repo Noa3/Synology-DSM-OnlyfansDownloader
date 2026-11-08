@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -104,7 +105,7 @@ def resolve_output_dir(value: Any, paths: Paths, *, require_writable: bool = Tru
     path = Path(text).expanduser()
     try:
         path = path.resolve()
-    except OSError:
+    except (OSError, RuntimeError):
         raise AppError('Der Downloadordner konnte nicht aufgelöst werden.') from None
     roots = allowed_roots(paths)
     if not path_is_allowed(path, roots):
@@ -112,8 +113,16 @@ def resolve_output_dir(value: Any, paths: Paths, *, require_writable: bool = Tru
     if path.exists():
         if not path.is_dir():
             raise AppError('Der gewählte Pfad ist kein Ordner.')
+        if not os.access(path, os.R_OK | os.X_OK):
+            raise AppError(f'Der Downloadordner ist für das Dienstkonto nicht lesbar oder nicht erreichbar: {path}. '
+                           'In DSM unter Freigabe → Bearbeiten → Berechtigungen dem Systeminternen Benutzer '
+                           'sc-onlyfansdl Lesen/Schreiben geben (inklusive Unterordner) und danach '
+                           'Einstellungen → Berechtigungen prüfen ausführen.')
         if require_writable and not directory_is_writable(path):
-            raise AppError('Der Downloadordner ist nicht beschreibbar. Prüfe die Freigabeberechtigung.')
+            raise AppError(f'Der Downloadordner ist für das Dienstkonto nicht beschreibbar: {path}. '
+                           'In DSM unter Freigabe → Bearbeiten → Berechtigungen dem Systeminternen Benutzer '
+                           'sc-onlyfansdl Lesen/Schreiben geben, „Auf diesen Ordner, Unterordner und Dateien '
+                           'anwenden“ wählen und danach Einstellungen → Berechtigungen prüfen ausführen.')
     else:
         raise AppError('Der Downloadordner existiert nicht. Bitte einen vorhandenen Ordner wählen oder ausdrücklich anlegen.')
     return path

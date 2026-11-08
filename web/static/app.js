@@ -233,9 +233,9 @@
     $('fact-memory').textContent = memoryText;
     $('fact-output').textContent = status.output_dir || '–';
     $('fact-share').textContent = (status.share && status.share.root) || '–';
-    $('fact-disk').textContent = status.disk
+    $('fact-disk').textContent = status.disk && status.disk.free_text
       ? t('{free} frei von {total}', { free: status.disk.free_text, total: status.disk.total_text })
-      : '–';
+      : t('Nicht verfügbar');
 
     const session = status.session || {};
     const sessionPresent = Boolean(session.present);
@@ -262,10 +262,14 @@
     $('library-files').textContent = library.manifest ? String(library.files || 0) : '–';
     $('library-bytes').textContent = library.manifest ? formatBytes(library.bytes) : '–';
     $('library-writable').textContent = library.writable ? t('ja') : t('nein');
+    const detail = library.detail || {};
     $('library-error').textContent = library.error
-      ? t('Das Manifest konnte nicht gelesen werden. Pfad und Berechtigungen prüfen.') : '';
+      ? t('Nicht lesbar: {error}. Pfad und Berechtigungen prüfen.', {
+        error: `${library.error}${detail.strerror ? `: ${detail.strerror}` : ''}`,
+      }) : '';
     const disk = state.status && state.status.disk;
-    $('library-disk').textContent = disk ? `${disk.free_text} ${t('frei')}` : '–';
+    $('library-disk').textContent = disk && disk.free_text
+      ? `${disk.free_text} ${t('frei')}` : t('Nicht verfügbar');
   }
 
   function computeNextRun(enabled, time, lastRun) {
@@ -605,9 +609,11 @@
 
   function statusWarnings(status) {
     const warnings = Array.isArray(status && status.warnings) ? status.warnings : [];
-    const detail = warnings
-      .map((item) => `${item.section || '?'}${item.error ? ` (${item.error})` : ''}`)
-      .join(', ');
+    const detail = warnings.map((item) => {
+      const error = item.detail || {};
+      const extra = error.strerror || error.message || '';
+      return `${item.section || '?'}${item.error ? ` (${item.error}${extra ? `: ${extra}` : ''})` : ''}`;
+    }).join(', ');
     if (detail) {
       connectionNotice(t('Teilweise Statusfehler: {detail}. Letzter Stand bleibt sichtbar.', { detail }), 'warn');
     }
@@ -764,6 +770,87 @@
     $('output-dir').value = settings.output_dir || '';
     $('library-dir').value = settings.output_dir || '';
     $('storage-setup').hidden = Boolean(settings.output_dir);
+    $('storage-check').hidden = true;
+    $('storage-check').replaceChildren();
+  }
+
+  function yesNo(value) {
+    return value ? t('ja') : t('nein');
+  }
+
+  function renderStorageCheck(data) {
+    const box = $('storage-check');
+    box.hidden = false;
+    box.className = `storage-check ${data.ok ? 'ok' : 'bad'}`;
+    box.replaceChildren();
+    const summary = document.createElement('p');
+    summary.className = data.ok ? 'ok' : 'bad';
+    summary.textContent = data.ok
+      ? t('Lesen und Schreiben für sc-onlyfansdl bestätigt.')
+      : t('Berechtigungsproblem erkannt.');
+    box.appendChild(summary);
+
+    const rows = [
+      [t('Pfad'), data.path || '–'],
+      [t('Dienstkonto'), `${data.process?.user || '?'} (uid ${data.process?.uid ?? '?'})`],
+      [t('Ordner lesen'), yesNo(data.target?.read)],
+      [t('Ordner wechseln'), yesNo(data.target?.execute)],
+      [t('Schreiben (Test)'), yesNo(data.write_test?.ok)],
+      [t('Freier Platz'), data.disk?.ok ? data.disk.free_text : t('Nicht verfügbar')],
+    ];
+    const facts = document.createElement('dl');
+    facts.className = 'facts';
+    for (const [label, value] of rows) {
+      const item = document.createElement('div');
+      const dt = document.createElement('dt'); dt.textContent = label;
+      const dd = document.createElement('dd'); dd.textContent = String(value);
+      item.append(dt, dd); facts.appendChild(item);
+    }
+    box.appendChild(facts);
+
+    const failing = (data.parents || []).filter((parent) => parent.exists && !parent.execute);
+    if (failing.length) {
+      const note = document.createElement('p');
+      note.className = 'path';
+      note.textContent = `${t('Elternordner ohne Wechselrecht')}: ${failing.map((parent) => `${parent.path} (${parent.mode})`).join(', ')}`;
+      box.appendChild(note);
+    }
+    const hints = document.createElement('ul');
+    hints.className = 'bullets';
+    for (const hint of data.hints || []) {
+      const item = document.createElement('li');
+      item.textContent = hint;
+      hints.appendChild(item);
+    }
+    box.appendChild(hints);
+    if (data.write_test && !data.write_test.ok && data.write_test.error) {
+      const error = document.createElement('p');
+      error.className = 'path';
+      error.textContent = `${data.write_test.error.type}: ${data.write_test.error.strerror || ''}`;
+      box.appendChild(error);
+    }
+    if (data.disk && data.disk.error) {
+      const error = document.createElement('p');
+      error.className = 'path';
+      error.textContent = `${data.disk.error.type}: ${data.disk.error.strerror || ''}`;
+      box.appendChild(error);
+    }
+  }
+
+  async function runStorageCheck() {
+    showTab('settings');
+    const box = $('storage-check');
+    box.hidden = false;
+    box.className = 'storage-check';
+    box.textContent = t('Prüfe …');
+    try {
+      const data = await api('/api/storage/check', { method: 'POST', body: {} });
+      renderStorageCheck(data);
+      toast(data.ok ? t('Berechtigungen bestätigt.') : t('Berechtigungsproblem erkannt.'), data.ok ? 'ok' : 'bad');
+    } catch (error) {
+      box.className = 'storage-check bad';
+      box.textContent = t('Berechtigungsprüfung fehlgeschlagen: {detail}', { detail: describeError(error) });
+    }
   }
 
   async function saveLibraryPath() {
@@ -1180,6 +1267,8 @@
       openFolderPicker($('library-dir').value.trim()).catch((error) => toast(error.message, 'bad'));
     });
     $('save-library').addEventListener('click', saveLibraryPath);
+    $('check-storage').addEventListener('click', runStorageCheck);
+    $('check-library-permissions').addEventListener('click', runStorageCheck);
 
     $('load-subscriptions').addEventListener('click', async () => {
       const button = $('load-subscriptions');

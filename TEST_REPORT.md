@@ -1,4 +1,4 @@
-# Test report — OnlyFans DL for Synology DSM 2.8.0-7
+# Test report — OnlyFans DL for Synology DSM 2.8.0-8
 
 Build date: **2026-11-07**
 Target platform: **Synology DS723+ (r1000), DSM 7.2, Python 3.13 from SynoCommunity**
@@ -14,9 +14,9 @@ Test environment: Windows 11, CPython 3.13.12, Chromium/Playwright
 
 | Check | Result | Where |
 | --- | --- | --- |
-| Full Python test suite | **364 tests, 0 failures, 3 skips** | local |
-| DSM-specific tests | **70 tests, 0 failures, 2 Linux skips** | local |
-| DSM tests including real process groups | **70 tests, 0 failures, no skips** | Linux CI |
+| Full Python test suite | **366 tests, 0 failures, 3 skips** | local |
+| DSM-specific tests | **72 tests, 0 failures, 2 Linux skips** | local |
+| DSM tests including real process groups | **72 tests, 0 failures, no skips** | Linux CI |
 | Package build | **passed** | local |
 | Reproducible build (twice) | **byte-identical** | local |
 | Browser UI (Playwright) | **passed**, no console errors | local |
@@ -42,7 +42,7 @@ python -m unittest discover -s tests
 Excerpt:
 
 ```
-Ran 364 tests in 105.668s
+Ran 366 tests in 74.378s
 OK (skipped=3)
 ```
 
@@ -65,15 +65,15 @@ service does **not** import `requests`, `curl_cffi`, `PIL`, `ofdl.api` or
 ## Package verification
 
 ```
-File:    dist/OnlyFansDL-r1000-dsm72_2.8.0-7.spk
+File:    dist/OnlyFansDL-r1000-dsm72_2.8.0-8.spk
 Size:    22.01 MiB
-SHA256:  ee1183c39facb50854f938e0354f6363cd67cef755c80217a8851fd38c5f3a6f
-MD5(package.tgz): 813fe3fa96b2d05dbed1e177e330aca7
+SHA256:  9bb5d9b03e3f65cd14e8e342cab01d706d5f53d6733c0bb4d4cb9804a726e580
+MD5(package.tgz): b3249765d99fc53ff159ccb6f4a37b35
 ```
 
 Verified:
 
-- `INFO`: `package=OnlyFansDL`, `version=2.8.0-7`, `arch=r1000`,
+- `INFO`: `package=OnlyFansDL`, `version=2.8.0-8`, `arch=r1000`,
   `os_min_ver=7.2-64570`, `adminport=8765`, `adminurl=/`,
   `install_dep_packages=python313>=3.13.11-9`, MD5 checksum matches.
 - `package.tgz`: `ofdl/dsm/service.py`, `ofdl/dsm/worker.py`,
@@ -131,7 +131,7 @@ Older illustrative screenshots (not the current storage dialog):
 The measurement was performed under Windows. PSS is not available there; the DSM
 target refers to PSS and must be measured with `tools/measure_dsm.py` on the
 DS723+. The following values come from the earlier measurement, not from a new
-memory benchmark of 2.8.0-7.
+memory benchmark of 2.8.0-8.
 
 | State | Processes | RSS | Private |
 | --- | --- | ---: | ---: |
@@ -190,7 +190,7 @@ the service and the active worker.
 
 Linux CI on implementation commit `f791623e2da6b21f6e6f8fbeffce65dec03a8604`:
 [`42401140801`](https://github.com/Noa3/Synology-DSM-OnlyfansDownloader/actions/runs/42401140801),
-`Ran 70 tests in 23.855s`, `OK`, no skips. Includes the real Linux tests for
+`Ran 72 tests in 23.855s`, `OK`, no skips. Includes the real Linux tests for
 worker child groups and service stop without a PID file. **Not a DSM hardware
 test.**
 

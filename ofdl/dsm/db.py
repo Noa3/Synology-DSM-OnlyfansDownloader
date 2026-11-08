@@ -380,4 +380,10 @@ def library_stats(output_dir: Path | str | None, timeout: float = 2.0) -> dict[s
             db.close()
     except (sqlite3.Error, OSError) as exc:
         result['error'] = type(exc).__name__
+        result['detail'] = {
+            'type': type(exc).__name__,
+            'errno': getattr(exc, 'errno', None),
+            'strerror': getattr(exc, 'strerror', None),
+            'filename': getattr(exc, 'filename', None),
+        }
     return result

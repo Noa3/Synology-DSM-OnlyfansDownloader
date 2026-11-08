@@ -1,5 +1,19 @@
 # Changes from the supplied onlyfans-dl.py
 
+## DSM 2.8.0-8 — prove library permissions
+
+- Add a user-triggered **Check permissions** action in Settings and Library.
+  It reports the saved path, effective package account/uid, owner/mode, read /
+  traverse / write access, parent folders, directory listing, a real create/
+  delete write probe, free space, manifest readability and actionable DSM hints.
+- Stop running a write probe on every status refresh. Status now uses cheap
+  `os.access` checks; the real probe runs only on demand or before a download.
+- Include `errno`, `strerror` and the affected path in PermissionError
+  diagnostics, and show `disk`/`library` permission errors in the UI.
+- Make download-start validation name the exact path and the `sc-onlyfansdl`
+  account, with the DSM permission steps.
+- No automatic ACL/ownership changes and no deletion of user data.
+
 ## DSM 2.8.0-7 — diagnose and survive status failures
 
 - Build `/api/status` from independent sections. A broken library, session file,
