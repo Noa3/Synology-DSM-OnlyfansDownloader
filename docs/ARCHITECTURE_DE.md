@@ -145,6 +145,18 @@ gelaufen, startet er denselben Worker-Auftragstyp wie ein manueller Download.
 Ein verpasster Lauf wird am selben Tag nachgeholt, sofern der Dienst läuft.
 Es wird nie ein zweiter Auftrag parallel gestartet.
 
+## Upgrade-Erhalt
+
+`preupgrade` stoppt den Dienst und legt eine private SQLite-Sicherung von
+`control.sqlite3`, eine Kopie von `session.json` und die Free-Resub-Historie an.
+Der laufende Dienst sichert zusätzlich einmal täglich; die letzten fünf
+Sicherungen liegen unter `var/backups`. `postupgrade` stellt nur dann wieder
+her, wenn die aktive Datenbank oder Sitzung fehlt oder beschädigt ist; gültige
+Daten werden nie überschrieben. Eine fehlgeschlagene Wiederherstellung stoppt
+das Upgrade. Dadurch bleiben Bibliothekspfad, Web-Passwort, Zeitplan, Proxy,
+Download-Standards, Free-Resub-Einstellungen und importierte Sitzung erhalten.
+Medien werden nie kopiert.
+
 ## Paket-Lebenszyklus
 
 - `postinst`/`postupgrade` legen die venv an, installieren die Wheels offline

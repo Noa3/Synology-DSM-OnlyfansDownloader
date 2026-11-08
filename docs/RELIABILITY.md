@@ -78,6 +78,26 @@ profiles per job and 5,000 daily reservations overall. Automation is disabled
 when importing a different account; disabling never requires fresh consent.
 Trials may later renew at a paid price, so review/accept them on OnlyFans itself.
 
+## Upgrade and daily backups
+
+`SYNOPKG_PKGVAR` is normally retained by DSM, but the package must not depend on
+that alone. Before an upgrade, `preupgrade` writes a private snapshot of:
+
+- `control.sqlite3` via the SQLite backup API (password hash, library path,
+  schedule, proxy, download defaults, free-resubscribe settings, job history),
+- `session.json` (imported OnlyFans session),
+- `config/free-*.json` (free-resubscribe history).
+
+The running service also writes one snapshot per day, so even an upgrade from an
+older package revision has a recent fallback. Snapshots live under
+`var/backups`, are mode 0600/0700, and the last five are kept.
+
+`postupgrade` restores a snapshot only if the live database or session is
+missing or corrupt. Valid data is never overwritten. If a backup exists but the
+restore fails, the upgrade is stopped instead of silently creating an empty
+database. A rerun of `bootstrap` preserves the existing password, path and
+settings. Uninstalling removes the snapshots; user media is never copied.
+
 ## Language and updates
 
 Auto language prefers a supported explicit DSM locale hint/accessible language

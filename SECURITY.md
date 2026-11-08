@@ -84,6 +84,16 @@ Alternatively an administrator with SSH can back up
 and restart the service. That is a diagnostic path, not a regular installation
 step.
 
+## Upgrade snapshots
+
+The package keeps up to five private snapshots under `var/backups` (0600/0700).
+They contain the same sensitive material as `var/data`: the password hash,
+settings, imported session and free-resubscribe history. They are never written
+to a user share or log. `postupgrade` restores only missing/corrupt live data;
+valid data is never overwritten. Uninstalling removes the snapshots together
+with the other private control data. Files in the chosen library and all media
+are never copied into a snapshot.
+
 ## Logs
 
 - `var/logs/service.log` (rotating, 2 MiB × 3)

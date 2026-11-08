@@ -86,6 +86,17 @@ Alternativ kann ein Administrator mit SSH die Datei
 `settings` bereinigen und den Dienst neu starten. Das ist nur ein
 Diagnoseweg, kein regulärer Installationsschritt.
 
+## Upgrade-Sicherungen
+
+Das Paket hält bis zu fünf private Sicherungen unter `var/backups` (0600/0700).
+Sie enthalten dieselben sensiblen Daten wie `var/data`: Passwort-Hash,
+Einstellungen, importierte Sitzung und Free-Resub-Historie. Sie werden nie in
+einer Benutzerfreigabe oder einem Protokoll abgelegt. `postupgrade` stellt nur
+fehlende oder beschädigte aktive Daten wieder her; gültige Daten werden nie
+überschrieben. Beim Deinstallieren werden die Sicherungen mit den übrigen
+privaten Steuerdaten entfernt. Dateien in der gewählten Bibliothek und alle
+Medien werden nie in eine Sicherung kopiert.
+
 ## Protokolle
 
 - `var/logs/service.log` (rotierend, 2 MiB × 3)

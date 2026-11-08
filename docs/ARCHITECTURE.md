@@ -142,6 +142,17 @@ active, a session exists and the job has not run today, it starts the same worke
 job type as a manual download. A missed run is caught up on the same day if the
 service is running. A second job is never started in parallel.
 
+## Upgrade preservation
+
+`preupgrade` stops the service and creates a private SQLite backup of
+`control.sqlite3`, a copy of `session.json` and the free-resubscribe history.
+The running service also snapshots once per day; the last five snapshots stay
+under `var/backups`. `postupgrade` restores only when the live database or
+session is missing/corrupt, never overwriting valid data. A failed restore stops
+the upgrade. This protects the library path, web password, schedule, proxy,
+download defaults, free-resubscribe settings and imported session. Media is
+never copied.
+
 ## Package lifecycle
 
 - `postinst`/`postupgrade` create the venv, install the wheels offline
